@@ -1,1 +1,2 @@
-# simple-java-handler
+# OpenFaaS Java Functions 
+
