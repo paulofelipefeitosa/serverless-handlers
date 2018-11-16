@@ -13,4 +13,4 @@ ENV fprocess="java Handler"
 
 HEALTHCHECK --interval=1s CMD [ -e /tmp/.lock ] || exit 1
 
-CMD ["fwatchdog"]
+CMD date "+Container-startup-time: %s%N" > timestamps.ts && fwatchdog
