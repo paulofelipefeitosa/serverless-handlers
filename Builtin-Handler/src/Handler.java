@@ -5,8 +5,8 @@ import java.lang.management.ManagementFactory;
 
 public class Handler {
     public static void main(String[] args) throws IOException {
-        long jvmStartTime = ManagementFactory.getRuntimeMXBean().getStartTime();
         long readyTime = System.currentTimeMillis();
+        long jvmStartTime = ManagementFactory.getRuntimeMXBean().getStartTime();
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
         String line = null;
         StringBuilder builder = new StringBuilder();
