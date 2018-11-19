@@ -1,7 +1,7 @@
 FROM openjdk:10
 
 RUN apt install curl \
-    && curl -sL https://github.com/openfaas/faas/releases/download/0.9.6/fwatchdog > /usr/bin/fwatchdog \
+    && curl -sL https://github.com/paulofelipefeitosa/faas/releases/download/v0.1-test/fwatchdog > /usr/bin/fwatchdog \
     && chmod +x /usr/bin/fwatchdog
 
 WORKDIR /root/
