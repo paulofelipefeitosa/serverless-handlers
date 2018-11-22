@@ -13,11 +13,12 @@ public class Handler {
         long jvmStartTime = ManagementFactory.getRuntimeMXBean().getStartTime();
 
         StringBuilder builder = new StringBuilder();
+        builder.append("{\"input\":");
         try (BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
                 Stream<String> stream = in.lines()) {
             builder.append(stream.collect(Collectors.joining(System.lineSeparator())));
-            builder.append(System.lineSeparator());
         }
+        builder.append(",");
         long readyToProcessTime = System.currentTimeMillis();
 
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -26,14 +27,21 @@ public class Handler {
         File file = new File("timestamps.ts");
         br = new BufferedReader(new FileReader(file));
         String line = null;
+        
+        builder.append("\"timestamps\":{");
         do {
             line = br.readLine();
-            builder.append((line != null) ? line + System.lineSeparator() : "");
+            if(line != null) {
+                String[] array = line.split(":");
+                builder.append("\"" + array[0] + "\":");
+                builder.append(array[1] + ",");
+            }
         } while (line != null);
 
-        builder.append("JVMStartTime: " + jvmStartTime + System.lineSeparator());
-        builder.append("ReadyTime: " + readyTime + System.lineSeparator());
-        builder.append("ReadyToProcessTime: " + readyToProcessTime + System.lineSeparator());
+        builder.append("\"JVMStartTime\": " + jvmStartTime + ",");
+        builder.append("\"ReadyTime\": " + readyTime + ",");
+        builder.append("\"ReadyToProcessTime\": " + readyToProcessTime);
+        builder.append("}}");
         br.close();
         System.out.println(builder.toString());
     }
