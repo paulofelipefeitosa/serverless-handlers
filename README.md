@@ -30,6 +30,12 @@ Then run:
 docker stack deploy func -c docker-compose.yml
 ```
 
+## Deploy a function
+
+```
+faas-cli deploy --image <docker-image> --label com.openfaas.scale.zero=true --env marshal_request=true --gateway http://127.0.0.1:8080 --name <function-name>
+```
+
 ## How to run the experiment
 
 ```
