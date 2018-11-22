@@ -17,8 +17,8 @@ public class Handler {
         try (BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
                 Stream<String> stream = in.lines()) {
             builder.append(stream.collect(Collectors.joining(System.lineSeparator())));
-            builder.append(",");
         }
+        builder.append(",");
         long readyToProcessTime = System.currentTimeMillis();
 
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
