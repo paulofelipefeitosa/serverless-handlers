@@ -49,7 +49,7 @@
 				<version>3.8.0</version>
 				<configuration>
 					<release>10</release>
-					<!-- >argLine>-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine -->
+					<argLine>-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
 				</configuration>
 			</plugin>
 		</plugins>
