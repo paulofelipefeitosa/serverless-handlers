@@ -13,7 +13,6 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<java.version>1.8</java.version>
 	</properties>
 
 	<dependencies>
@@ -25,11 +24,13 @@
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk -->
+		<!-- https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-s3 -->
 		<dependency>
 			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk</artifactId>
-			<version>1.11.457</version>
+			<artifactId>aws-java-sdk-s3</artifactId>
+			<version>1.11.458</version>
 		</dependency>
+
 
 		<!-- https://mvnrepository.com/artifact/org.json/json -->
 		<dependency>
@@ -49,7 +50,7 @@
 				<version>3.8.0</version>
 				<configuration>
 					<release>10</release>
-					<argLine>-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
+					<!-- argLine>-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine -->
 				</configuration>
 			</plugin>
 		</plugins>
