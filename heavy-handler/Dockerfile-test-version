@@ -9,6 +9,10 @@ WORKDIR /root/
 
 RUN git clone https://github.com/paulofelipefeitosa/openfaas-java-handlers.git
 
+WORKDIR /root/openfaas-java-handlers
+
+RUN git checkout "heavy-handler"
+
 WORKDIR /root/openfaas-java-handlers/heavy-handler
 
 RUN mvn install
