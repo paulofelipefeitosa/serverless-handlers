@@ -8,7 +8,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
-import java.nio.file.Paths;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.json.JSONObject;
@@ -25,7 +24,7 @@ public class Handler {
 
         String bucket_name = "teste";
         String file_path = "teste";
-        String key_name = Paths.get(file_path).getFileName().toString();
+        String key_name = "teste";
 
         try {
             final AmazonS3 s3 = AmazonS3ClientBuilder.defaultClient();
@@ -33,9 +32,9 @@ public class Handler {
         } catch (Exception e) {
         }
 
-        timestamps.append("JVMStartTime", jvmStartTime);
-        timestamps.append("ReadyTime", readyTime);
-        timestamps.append("ReadyToProcessTime", readyToProcessTime);
+        timestamps.put("JVMStartTime", jvmStartTime);
+        timestamps.put("ReadyTime", readyTime);
+        timestamps.put("ReadyToProcessTime", readyToProcessTime);
 
         response.put("timestamps", timestamps);
 
@@ -52,7 +51,7 @@ public class Handler {
             line = br.readLine();
             if (line != null) {
                 String[] array = line.split(":");
-                response.append(array[0], array[1]);
+                response.put(array[0], array[1]);
             }
         } while (line != null);
         br.close();
@@ -63,7 +62,7 @@ public class Handler {
         JSONObject response = new JSONObject();
         try (BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
                 Stream<String> stream = in.lines()) {
-            response.append("input", stream.collect(Collectors.joining(System.lineSeparator())));
+            response.put("input", stream.collect(Collectors.joining(System.lineSeparator())));
         }
         return response;
     }

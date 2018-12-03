@@ -21,4 +21,4 @@ ENV fprocess="java -jar /root/openfaas-java-handlers/heavy-handler/target/heavy-
 
 HEALTHCHECK --interval=1s CMD [ -e /tmp/.lock ] || exit 1
 
-CMD date "+Container-startup-time: %s%N" > timestamps.ts && fwatchdog
+CMD date "+Container-startup-time:%s%N" > timestamps.ts && fwatchdog
