@@ -17,7 +17,7 @@ WORKDIR /root/openfaas-java-handlers/heavy-handler
 
 RUN mvn install -Dmaven.test.skip=true
 
-ENV fprocess="java -jar /root/openfaas-java-handlers/heavy-handler/target/heavy-handler-0.0.1-SNAPSHOT.jar"
+ENV fprocess="java -jar /root/openfaas-java-handlers/heavy-handler/target/heavy-handler-0.0.1-SNAPSHOT-jar-with-dependencies.jar"
 
 HEALTHCHECK --interval=1s CMD [ -e /tmp/.lock ] || exit 1
 
