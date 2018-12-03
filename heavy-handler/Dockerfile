@@ -9,13 +9,15 @@ WORKDIR /root/
 
 RUN git clone https://github.com/paulofelipefeitosa/openfaas-java-handlers.git
 
-RUN cd openfaas-java-handlers/heavy-handler
+WORKDIR /root/openfaas-java-handlers
 
-RUN mvn install
+RUN git checkout "heavy-handler"
 
-RUN ls && ls target
+WORKDIR /root/openfaas-java-handlers/heavy-handler
 
-ENV fprocess="java -jar target/heavy-handler.0.0.1-SNAPSHOT.jar"
+RUN mvn install -Dmaven.test.skip=true
+
+ENV fprocess="java -jar /root/openfaas-java-handlers/heavy-handler/target/heavy-handler-0.0.1-SNAPSHOT.jar"
 
 HEALTHCHECK --interval=1s CMD [ -e /tmp/.lock ] || exit 1
 

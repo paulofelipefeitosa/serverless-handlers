@@ -2,7 +2,6 @@ package br.edu.ufcg.lsd.heavy_handler;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.AmazonServiceException;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -24,14 +23,14 @@ public class Handler {
 
         JSONObject timestamps = getContainerTimestamps();
 
-        String bucket_name = args[0];
-        String file_path = args[1];
+        String bucket_name = "teste";
+        String file_path = "teste";
         String key_name = Paths.get(file_path).getFileName().toString();
 
-        final AmazonS3 s3 = AmazonS3ClientBuilder.defaultClient();
         try {
+            final AmazonS3 s3 = AmazonS3ClientBuilder.defaultClient();
             s3.putObject(bucket_name, key_name, new File(file_path));
-        } catch (AmazonServiceException e) {
+        } catch (Exception e) {
         }
 
         timestamps.append("JVMStartTime", jvmStartTime);
