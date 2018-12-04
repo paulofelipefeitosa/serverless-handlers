@@ -1,6 +1,5 @@
 package br.edu.ufcg.lsd.heavy_handler;
 
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import java.io.BufferedReader;
 import java.io.File;
@@ -22,23 +21,17 @@ public class Handler {
 
         JSONObject timestamps = getContainerTimestamps();
 
-        String bucket_name = "teste";
-        String file_path = "teste";
-        String key_name = "teste";
-
         try {
-            final AmazonS3 s3 = AmazonS3ClientBuilder.defaultClient();
-            s3.putObject(bucket_name, key_name, new File(file_path));
-        } catch (Exception e) {
+            AmazonS3ClientBuilder.defaultClient();
+        } finally {
+            timestamps.put("JVMStartTime", jvmStartTime);
+            timestamps.put("ReadyTime", readyTime);
+            timestamps.put("ReadyToProcessTime", readyToProcessTime);
+
+            response.put("timestamps", timestamps);
+
+            System.out.println(response.toString());
         }
-
-        timestamps.put("JVMStartTime", jvmStartTime);
-        timestamps.put("ReadyTime", readyTime);
-        timestamps.put("ReadyToProcessTime", readyToProcessTime);
-
-        response.put("timestamps", timestamps);
-
-        System.out.println(response.toString());
     }
 
     private static JSONObject getContainerTimestamps() throws IOException {
