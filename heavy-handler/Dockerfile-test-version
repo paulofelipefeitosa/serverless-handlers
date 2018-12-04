@@ -1,0 +1,24 @@
+FROM openjdk:10
+
+RUN apt-get update \
+	&& apt-get install -y curl maven \
+    && curl -sL http://www2.lsd.ufcg.edu.br/~paulo.felipe/fwatchdog > /usr/bin/fwatchdog \
+    && chmod +x /usr/bin/fwatchdog
+
+WORKDIR /root/
+
+RUN git clone https://github.com/paulofelipefeitosa/openfaas-java-handlers.git
+
+WORKDIR /root/openfaas-java-handlers
+
+RUN git checkout "heavy-handler"
+
+WORKDIR /root/openfaas-java-handlers/heavy-handler
+
+RUN mvn install -Dmaven.test.skip=true
+
+ENV fprocess="java -jar /root/openfaas-java-handlers/heavy-handler/target/heavy-handler-0.0.1-SNAPSHOT-jar-with-dependencies.jar"
+
+HEALTHCHECK --interval=1s CMD [ -e /tmp/.lock ] || exit 1
+
+CMD date "+Container-startup-time:%s%N" > timestamps.ts && fwatchdog
