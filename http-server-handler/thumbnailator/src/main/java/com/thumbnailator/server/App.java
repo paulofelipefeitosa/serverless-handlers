@@ -106,10 +106,10 @@ public class App {
             for (Map.Entry<String, String> entry : res.getHeaders().entrySet()) {
                 responseHeaders.set(entry.getKey(), entry.getValue());
             }
-            responseHeaders.add("RunHandlerTaskTimestamp",
+            responseHeaders.add("X-Run-Handler-Task-Timestamp",
                     Long.toString(tsExecutor.runTaskTimestamp));
-            responseHeaders.add("ReadyTimestamp", Long.toString(readyTime));
-            responseHeaders.add("JVMStartupTimestamp", Long.toString(jvmStartTime));
+            responseHeaders.add("X-JVM-Startup-Timestamp", Long.toString(jvmStartTime));
+            responseHeaders.add("X-Ready-Timestamp", Long.toString(readyTime));
 
             t.sendResponseHeaders(res.getStatusCode(), bytesOut.length);
 
