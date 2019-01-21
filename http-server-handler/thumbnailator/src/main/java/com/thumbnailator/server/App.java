@@ -17,18 +17,6 @@ import com.thumbnailator.model.*;
 
 public class App {
 
-    public static TimestampExecutor tsExecutor;
-
-    protected static class TimestampExecutor implements Executor {
-
-        public long runTaskTimestamp;
-
-        public void execute(Runnable task) {
-            runTaskTimestamp = System.currentTimeMillis();
-            task.run();
-        }
-    }
-
     public static void main(String[] args) throws Exception {
         int port = 9000;
 
@@ -38,10 +26,8 @@ public class App {
         HttpServer server = HttpServer.create(addr, 0);
         InvokeHandler invokeHandler = new InvokeHandler(handler);
 
-        tsExecutor = new TimestampExecutor();
-
         server.createContext("/", invokeHandler);
-        server.setExecutor(tsExecutor); // creates a default executor
+        server.setExecutor(null); // creates a default executor
         server.start();
 
         System.out.println("SERVER STARTED!");
@@ -57,8 +43,6 @@ public class App {
 
         @Override
         public void handle(HttpExchange t) throws IOException {
-            long readyTime = System.currentTimeMillis();
-            long jvmStartTime = ManagementFactory.getRuntimeMXBean().getStartTime();
             String requestBody = "";
             String method = t.getRequestMethod();
 
@@ -106,10 +90,6 @@ public class App {
             for (Map.Entry<String, String> entry : res.getHeaders().entrySet()) {
                 responseHeaders.set(entry.getKey(), entry.getValue());
             }
-            responseHeaders.add("X-Run-Handler-Task-Timestamp",
-                    Long.toString(tsExecutor.runTaskTimestamp));
-            responseHeaders.add("X-JVM-Startup-Timestamp", Long.toString(jvmStartTime));
-            responseHeaders.add("X-Ready-Timestamp", Long.toString(readyTime));
 
             t.sendResponseHeaders(res.getStatusCode(), bytesOut.length);
 

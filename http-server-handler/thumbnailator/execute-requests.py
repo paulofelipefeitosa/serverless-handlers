@@ -40,8 +40,9 @@ def main():
 
 	protocol = 'http://'
 	gateway_address = args[1]
-	function_name = args[2]
-	total_requests = int(args[3])
+	total_requests = int(args[2])
+
+	function_name = ''
 
 	csv_file = open(function_name + '-' + str(total_requests) + '-' + str(int(time.time())) + '.csv', 'w')
 	csv_file.write('Req_Id,Run_Handler_Task,JVM_Startup,Runtime_Startup\n')
