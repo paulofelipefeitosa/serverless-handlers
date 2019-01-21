@@ -11,10 +11,23 @@ import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executor;
 import com.sun.net.httpserver.Headers;
 import com.thumbnailator.model.*;
 
 public class App {
+
+    public static TimestampExecutor tsExecutor;
+
+    protected static class TimestampExecutor implements Executor {
+
+        public long runTaskTimestamp;
+
+        public void execute(Runnable task) {
+            runTaskTimestamp = System.currentTimeMillis();
+            task.run();
+        }
+    }
 
     public static void main(String[] args) throws Exception {
         int port = 9000;
@@ -25,8 +38,10 @@ public class App {
         HttpServer server = HttpServer.create(addr, 0);
         InvokeHandler invokeHandler = new InvokeHandler(handler);
 
+        tsExecutor = new TimestampExecutor();
+
         server.createContext("/", invokeHandler);
-        server.setExecutor(null); // creates a default executor
+        server.setExecutor(tsExecutor); // creates a default executor
         server.start();
 
         System.out.println("SERVER STARTED!");
@@ -69,7 +84,7 @@ public class App {
                     reqHeadersMap.put(header.getKey(), headerValues.get(0));
                 }
             }
-            
+
             // for(Map.Entry<String, String> entry : reqHeadersMap.entrySet()) {
             // System.out.println("Req header " + entry.getKey() + " " + entry.getValue());
             // }
@@ -91,6 +106,8 @@ public class App {
             for (Map.Entry<String, String> entry : res.getHeaders().entrySet()) {
                 responseHeaders.set(entry.getKey(), entry.getValue());
             }
+            responseHeaders.add("RunHandlerTaskTimestamp",
+                    Long.toString(tsExecutor.runTaskTimestamp));
             responseHeaders.add("ReadyTimestamp", Long.toString(readyTime));
             responseHeaders.add("JVMStartupTimestamp", Long.toString(jvmStartTime));
 
