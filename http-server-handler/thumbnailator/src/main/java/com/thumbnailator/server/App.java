@@ -5,14 +5,13 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.management.ManagementFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
-
 import java.util.HashMap;
 import java.util.Map;
 import com.sun.net.httpserver.Headers;
-
 import com.thumbnailator.model.*;
 
 public class App {
@@ -29,7 +28,7 @@ public class App {
         server.createContext("/", invokeHandler);
         server.setExecutor(null); // creates a default executor
         server.start();
-    	
+
         System.out.println("SERVER STARTED!");
         System.out.println("LISTENING TO:" + server.getAddress());
     }
@@ -43,6 +42,8 @@ public class App {
 
         @Override
         public void handle(HttpExchange t) throws IOException {
+            long readyTime = System.currentTimeMillis();
+            long jvmStartTime = ManagementFactory.getRuntimeMXBean().getStartTime();
             String requestBody = "";
             String method = t.getRequestMethod();
 
@@ -56,25 +57,26 @@ public class App {
                 }
                 // StandardCharsets.UTF_8.name() > JDK 7
                 requestBody = result.toString("UTF-8");
-	        }
-            
+            }
+
             // System.out.println(requestBody);
             Headers reqHeaders = t.getRequestHeaders();
             Map<String, String> reqHeadersMap = new HashMap<String, String>();
 
             for (Map.Entry<String, java.util.List<String>> header : reqHeaders.entrySet()) {
                 java.util.List<String> headerValues = header.getValue();
-                if(headerValues.size() > 0) {
+                if (headerValues.size() > 0) {
                     reqHeadersMap.put(header.getKey(), headerValues.get(0));
                 }
             }
-
+            
             // for(Map.Entry<String, String> entry : reqHeadersMap.entrySet()) {
-            //     System.out.println("Req header " + entry.getKey() + " " + entry.getValue());
+            // System.out.println("Req header " + entry.getKey() + " " + entry.getValue());
             // }
 
-            IRequest req = new Request(requestBody, reqHeadersMap,t.getRequestURI().getRawQuery(), t.getRequestURI().getPath());
-            
+            IRequest req = new Request(requestBody, reqHeadersMap, t.getRequestURI().getRawQuery(),
+                    t.getRequestURI().getPath());
+
             IResponse res = this.handler.Handle(req);
 
             String response = res.getBody();
@@ -82,13 +84,15 @@ public class App {
 
             Headers responseHeaders = t.getResponseHeaders();
             String contentType = res.getContentType();
-            if(contentType.length() > 0) {
+            if (contentType.length() > 0) {
                 responseHeaders.set("Content-Type", contentType);
             }
 
-            for(Map.Entry<String, String> entry : res.getHeaders().entrySet()) {
+            for (Map.Entry<String, String> entry : res.getHeaders().entrySet()) {
                 responseHeaders.set(entry.getKey(), entry.getValue());
             }
+            responseHeaders.add("ReadyTimestamp", Long.toString(readyTime));
+            responseHeaders.add("JVMStartupTimestamp", Long.toString(jvmStartTime));
 
             t.sendResponseHeaders(res.getStatusCode(), bytesOut.length);
 
@@ -96,7 +100,8 @@ public class App {
             os.write(bytesOut);
             os.close();
 
-            //System.out.println("Request / " + Integer.toString(bytesOut.length) +" bytes written.");
+            // System.out.println("Request / " + Integer.toString(bytesOut.length) +" bytes
+            // written.");
         }
     }
 
