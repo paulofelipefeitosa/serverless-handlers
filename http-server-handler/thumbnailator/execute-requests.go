@@ -37,15 +37,15 @@ func main() {
 	
 	serverOutputStream, err := upServerCmd.StdoutPipe()
 	if err != nil {
-    	log.Fatal(err)
-    	os.Exit(-1)
+		log.Fatal(err)
+		os.Exit(-1)
 	}
 
 	// Start Http Server
 	t1 := time.Now().UTC().UnixNano()
 	if err := upServerCmd.Start(); err != nil {
-    	log.Fatal(err)
-    	os.Exit(-1)
+		log.Fatal(err)
+		os.Exit(-1)
 	}
 	t4 := getT4(functionUrl, serverOutputStream) * (1000000)
 
@@ -55,13 +55,13 @@ func main() {
 	// Write results
 	fmt.Printf("%s,%s,%d\n", "RuntimeReadyTime", executionId, t4 - t1)
 	for i := 0; i < len(roundTrip); i++ {
-    	fmt.Printf("%s,%d,%d\n", "RoundTripTime", i, roundTrip[i])
-    	fmt.Printf("%s,%d,%d\n", "ServiceTime", i, serviceTime[i])
+		fmt.Printf("%s,%d,%d\n", "RoundTripTime", i, roundTrip[i])
+		fmt.Printf("%s,%d,%d\n", "ServiceTime", i, serviceTime[i])
 	}
 
 	// Kill Http Server Process
 	if err := upServerCmd.Process.Kill(); err != nil {
-	    log.Fatal("failed to kill process: ", err)
+		log.Fatal("failed to kill process: ", err)
 	}
 }
 
