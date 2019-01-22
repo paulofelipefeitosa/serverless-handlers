@@ -1,10 +1,17 @@
 #!/bin/bash
 echo "Building App"
 mvn install
+go build execute-requests.go
 
-echo "Running HTTP Server"
-scale=0.1 image_url=https://i.imgur.com/BhlDUOR.jpg java -jar target/thumbnailator-server-maven-0.0.1-SNAPSHOT.jar > log.out 2> log.err &
-sleep 10
+echo "Starting experiment"
 
-echo "Executing Requests"
-python execute-requests.py localhost:9000 $1
+REP=$1
+RESULTS_FILENAME=http-server-handler-exp-"$(date +%s)"-"$REP".csv
+
+echo "Metric,Id,Value" > $RESULTS_FILENAME
+
+for i in $(seq "$REP")
+do
+	echo "Rep $i..."
+	./execute-requests localhost:9000 / $REP $i >> $RESULTS_FILENAME
+done
