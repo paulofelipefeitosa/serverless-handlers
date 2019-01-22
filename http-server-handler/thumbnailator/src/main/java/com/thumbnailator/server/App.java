@@ -29,9 +29,6 @@ public class App {
         server.createContext("/", invokeHandler);
         server.setExecutor(null); // creates a default executor
         server.start();
-
-        System.out.println("SERVER STARTED!");
-        System.out.println("LISTENING TO:" + server.getAddress());
     }
 
     static class InvokeHandler implements HttpHandler {
