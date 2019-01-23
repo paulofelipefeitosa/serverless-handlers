@@ -36,14 +36,18 @@ func main() {
 	if err := upServerCmd.Start(); err != nil {
 		log.Fatal(err)
 	}
-	millis2Nano := int64(1000000)
-	HTTPServerReadyTS, err := getHTTPServerReadyTS(functionURL, serverSTDOUT)
+	httpServerReadyTS, err := getHTTPServerReadyTS(functionURL, serverSTDOUT)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Max tries reached")
 		fmt.Fprintln(os.Stderr, err)
-		killHTTPServer(upServerCmd.Process)
+		
+		// Kill Http server process
+		if err := upServerCmd.Process.Kill(); err != nil {
+			log.Fatal("failed to kill process: ", err)
+		}
 	}
-	HTTPServerReadyTS *= millis2Nano
+	millis2Nano := int64(1e6)
+	httpServerReadyTS *= millis2Nano
 
 	// Ignore T6 line that the HTTP Handler writes
 	fmt.Fprintln(os.Stderr, fmt.Sprintf("Ignoring: %d", ignoreEndServiceTs(serverSTDOUT)))
@@ -52,7 +56,7 @@ func main() {
 	roundTrip, serviceTime := getRoundTripAndServiceTime(nRequests, functionURL, serverSTDOUT)
 
 	// Write results
-	fmt.Printf("%s,%s,%d\n", "RuntimeReadyTime", executionID, HTTPServerReadyTS - startHTTPServerTS)
+	fmt.Printf("%s,%s,%d\n", "RuntimeReadyTime", executionID, httpServerReadyTS - startHTTPServerTS)
 	for i := 0; i < len(roundTrip); i++ {
 		fmt.Printf("%s,%d,%d\n", "RoundTripTime", i, roundTrip[i])
 		fmt.Printf("%s,%d,%d\n", "ServiceTime", i, serviceTime[i])
@@ -60,13 +64,16 @@ func main() {
 
 	fmt.Fprintln(os.Stderr, fmt.Sprintf("End of execution: %s", executionID))
 
-	killHTTPServer(upServerCmd.Process)
+	// Kill Http server process
+	if err := upServerCmd.Process.Kill(); err != nil {
+		log.Fatal("failed to kill process: ", err)
+	}
 }
 
 func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverSTDOUT io.ReadCloser) ([]int64, []int64) {
 	var roundTrip, serviceTime []int64
 	var startServiceTS, endServiceTS int64
-	millis2Nano := int64(1000000)
+	millis2Nano := int64(1e6)
 	for i := int64(0); i < nRequests; i++ {
 		response, err, sendRequestTS, receiveResponseTS := sendRequest2(functionURL)
 		if response.StatusCode == http.StatusOK {
@@ -84,20 +91,24 @@ func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverSTDOU
 
 func getHTTPServerReadyTS(functionURL string, serverSTDOUT io.ReadCloser) (int64, error) {
 	maxFailsToStart := int64(20000)
-	var failCount, HTTPServerReadyTS int64
+	var failCount, httpServerReadyTS int64
 	for {
 		resp, err := http.Get(functionURL)
-		if err == nil && resp.StatusCode == http.StatusOK {
-			io.Copy(ioutil.Discard, resp.Body)
-			resp.Body.Close()
-			fmt.Fscanf(serverSTDOUT, "T4: %d", &HTTPServerReadyTS)
-			return HTTPServerReadyTS, nil
+		if err == nil  {
+			if resp.StatusCode == http.StatusOK {
+				io.Copy(ioutil.Discard, resp.Body)
+				resp.Body.Close()
+				fmt.Fscanf(serverSTDOUT, "T4: %d", &httpServerReadyTS)
+				return httpServerReadyTS, nil
+			} else {
+				return -1, fmt.Errorf("Server is up, but HTTP response is not OK!\nStatusCode: %d\n", resp.StatusCode)
+			}
 		} else {
-			time.Sleep(20 * time.Millisecond)
+			time.Sleep(2 * time.Millisecond)
 			failCount += 1
-		}
-		if failCount == maxFailsToStart {
-			return int64(1)<<62, err
+			if failCount == maxFailsToStart {
+				return -1, err
+			}
 		}
 	}
 }
@@ -107,8 +118,8 @@ func sendRequest2(URL string) (*http.Response, error, int64, int64) {
 	response, err := http.Get(URL)
 	receiveResponseTS := time.Now()
 	if err == nil && response.Body != nil {
-		defer response.Body.Close()
-		_,_ = ioutil.ReadAll(response.Body)
+		io.Copy(ioutil.Discard, response.Body)
+		response.Body.Close()
 	}
 	return response, err, sendRequestTS.UTC().UnixNano(), receiveResponseTS.UTC().UnixNano()
 }
@@ -117,11 +128,4 @@ func ignoreEndServiceTs(serverSTDOUT io.Reader) int64 {
 	var endServiceTS int64
 	fmt.Fscanf(serverSTDOUT, "T6: %d", &endServiceTS)
 	return endServiceTS
-}
-
-func killHTTPServer(serverProcess *os.Process) {
-	// Kill Http Server Process
-	if err := serverProcess.Kill(); err != nil {
-		log.Fatal("failed to kill process: ", err)
-	}
 }
