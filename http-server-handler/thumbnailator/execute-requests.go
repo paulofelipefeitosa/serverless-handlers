@@ -4,7 +4,6 @@ import(
 	"os"
 	"os/exec"
 	"log"
-	"strings"
 	"time"
 	"net/http"
 	"strconv"
@@ -14,100 +13,115 @@ import(
 )
 
 func main() {
-	protocol := "http://"
 	serverAddress := os.Args[1]
 	endpoint := os.Args[2]
-	var builder strings.Builder
-	builder.WriteString(protocol)
-	builder.WriteString(serverAddress)
-	builder.WriteString(endpoint)
-	functionUrl := builder.String()
-
 	nRequests, err := strconv.ParseInt(os.Args[3], 10, 64)
-	if err != nil {
-		log.Fatal(err)
-		os.Exit(-1)
-	}
-	executionId := os.Args[4]
+	executionID := os.Args[4]
 
-	httpServerCmdParts := strings.Split("java -jar target/thumbnailator-server-maven-0.0.1-SNAPSHOT.jar", " ")
-	upServerCmd := exec.Command(httpServerCmdParts[0], httpServerCmdParts[1:]...)
-	
-	upServerCmd.Env = getEnvs()
-	
-	serverOutputStream, err := upServerCmd.StdoutPipe()
 	if err != nil {
 		log.Fatal(err)
-		os.Exit(-1)
+	}
+	functionURL := fmt.Sprintf("http://%s%s", serverAddress, endpoint)
+
+	upServerCmd := exec.Command("java", "-jar", "target/thumbnailator-server-maven-0.0.1-SNAPSHOT.jar")
+	upServerCmd.Env = os.Environ()
+	
+	serverSTDOUT, err := upServerCmd.StdoutPipe()
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	// Start Http Server
-	t1 := time.Now().UTC().UnixNano()
+	startHTTPServerTS := time.Now().UTC().UnixNano()
 	if err := upServerCmd.Start(); err != nil {
 		log.Fatal(err)
-		os.Exit(-1)
 	}
-	t4 := getT4(functionUrl, serverOutputStream) * (1000000)
+	millis2Nano := int64(1000000)
+	HTTPServerReadyTS, err := getHTTPServerReadyTS(functionURL, serverSTDOUT)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Max tries reached")
+		fmt.Fprintln(os.Stderr, err)
+		killHTTPServer(upServerCmd.Process)
+	}
+	HTTPServerReadyTS *= millis2Nano
+
+	// Ignore T6 line that the HTTP Handler writes
+	fmt.Fprintln(os.Stderr, fmt.Sprintf("Ignoring: %d", ignoreEndServiceTs(serverSTDOUT)))
 
 	// Apply requests
-	roundTrip, serviceTime := getRoundTripAndServiceTime(nRequests, functionUrl, serverOutputStream)
+	roundTrip, serviceTime := getRoundTripAndServiceTime(nRequests, functionURL, serverSTDOUT)
 
 	// Write results
-	fmt.Printf("%s,%s,%d\n", "RuntimeReadyTime", executionId, t4 - t1)
+	fmt.Printf("%s,%s,%d\n", "RuntimeReadyTime", executionID, HTTPServerReadyTS - startHTTPServerTS)
 	for i := 0; i < len(roundTrip); i++ {
 		fmt.Printf("%s,%d,%d\n", "RoundTripTime", i, roundTrip[i])
 		fmt.Printf("%s,%d,%d\n", "ServiceTime", i, serviceTime[i])
 	}
 
-	// Kill Http Server Process
-	if err := upServerCmd.Process.Kill(); err != nil {
-		log.Fatal("failed to kill process: ", err)
-	}
+	fmt.Fprintln(os.Stderr, fmt.Sprintf("End of execution: %s", executionID))
+
+	killHTTPServer(upServerCmd.Process)
 }
 
-func getRoundTripAndServiceTime(nRequests int64, functionUrl string, serverStdout io.ReadCloser) ([]int64, []int64) {
+func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverSTDOUT io.ReadCloser) ([]int64, []int64) {
 	var roundTrip, serviceTime []int64
+	var startServiceTS, endServiceTS int64
+	millis2Nano := int64(1000000)
 	for i := int64(0); i < nRequests; i++ {
-		response, err, t2, t3 := getResponseFrom(functionUrl)
-		if response.StatusCode == 200 {
-			var t5, t6 int64
-			fmt.Fscanf(serverStdout, "T5: %d", &t5)
-			fmt.Fscanf(serverStdout, "T6: %d", &t6)
-			roundTrip = append(roundTrip, t3 - t2)
-			serviceTime = append(serviceTime, (t6 - t5)*(1000000))
+		response, err, sendRequestTS, receiveResponseTS := sendRequest2(functionURL)
+		if response.StatusCode == http.StatusOK {
+			fmt.Fscanf(serverSTDOUT, "T5: %d", &startServiceTS)
+			fmt.Fscanf(serverSTDOUT, "T6: %d", &endServiceTS)
+			
+			roundTrip = append(roundTrip, receiveResponseTS - sendRequestTS)
+			serviceTime = append(serviceTime, (endServiceTS - startServiceTS) * millis2Nano)
 		} else {
-			log.Fatal(err)
+			fmt.Fprint(os.Stderr, err)
 		}
 	}
 	return roundTrip, serviceTime
 }
 
-func getT4(functionUrl string, serverStdout io.ReadCloser) int64 {
-	var t4, t6 int64
+func getHTTPServerReadyTS(functionURL string, serverSTDOUT io.ReadCloser) (int64, error) {
+	maxFailsToStart := int64(20000)
+	var failCount, HTTPServerReadyTS int64
 	for {
-		response, err, _, _ := getResponseFrom(functionUrl)
-		if err == nil && response.StatusCode == 200 {
-			fmt.Fscanf(serverStdout, "T4: %d", &t4)
-			fmt.Fscanf(serverStdout, "T6: %d", &t6)
-			return t4
+		resp, err := http.Get(functionURL)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			io.Copy(ioutil.Discard, resp.Body)
+			resp.Body.Close()
+			fmt.Fscanf(serverSTDOUT, "T4: %d", &HTTPServerReadyTS)
+			return HTTPServerReadyTS, nil
+		} else {
+			time.Sleep(20 * time.Millisecond)
+			failCount += 1
+		}
+		if failCount == maxFailsToStart {
+			return int64(1)<<62, err
 		}
 	}
 }
 
-func getResponseFrom(url string) (*http.Response, error, int64, int64) {
-	t2 := time.Now()
-	response, err := http.Get(url)
-	t3 := time.Now()
+func sendRequest2(URL string) (*http.Response, error, int64, int64) {
+	sendRequestTS := time.Now()
+	response, err := http.Get(URL)
+	receiveResponseTS := time.Now()
 	if err == nil && response.Body != nil {
-		response.Body.Close()
+		defer response.Body.Close()
 		_,_ = ioutil.ReadAll(response.Body)
 	}
-	return response, err, t2.UTC().UnixNano(), t3.UTC().UnixNano()
+	return response, err, sendRequestTS.UTC().UnixNano(), receiveResponseTS.UTC().UnixNano()
 }
 
-func getEnvs() []string {
-	var envs = os.Environ()
-	envs = append(envs, "scale=0.1")
-	envs = append(envs, "image_url=https://i.imgur.com/BhlDUOR.jpg")
-	return envs
+func ignoreEndServiceTs(serverSTDOUT io.Reader) int64 {
+	var endServiceTS int64
+	fmt.Fscanf(serverSTDOUT, "T6: %d", &endServiceTS)
+	return endServiceTS
+}
+
+func killHTTPServer(serverProcess *os.Process) {
+	// Kill Http Server Process
+	if err := serverProcess.Kill(); err != nil {
+		log.Fatal("failed to kill process: ", err)
+	}
 }
