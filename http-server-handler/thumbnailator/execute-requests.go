@@ -104,7 +104,7 @@ func getHTTPServerReadyTS(functionURL string, serverSTDOUT io.ReadCloser) (int64
 				return -1, fmt.Errorf("Server is up, but HTTP response is not OK!\nStatusCode: %d\n", resp.StatusCode)
 			}
 		} else {
-			time.Sleep(2 * time.Millisecond)
+			time.Sleep(5 * time.Millisecond)
 			failCount += 1
 			if failCount == maxFailsToStart {
 				return -1, err
