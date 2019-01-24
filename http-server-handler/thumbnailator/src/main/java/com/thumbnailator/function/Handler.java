@@ -1,17 +1,12 @@
 package com.thumbnailator.function;
 
-import com.thumbnailator.model.IHandler;
 import com.thumbnailator.model.IResponse;
 import com.thumbnailator.model.IRequest;
 import com.thumbnailator.model.Response;
-
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
-
 import java.util.List;
-import java.util.ArrayList;
 import java.lang.Error;
-
 import net.coobird.thumbnailator.Thumbnails;
 import java.net.URL;
 import java.awt.image.BufferedImage;
@@ -19,7 +14,15 @@ import javax.imageio.ImageIO;
 
 public class Handler implements com.thumbnailator.model.IHandler {
 
+    private static boolean isFirst = true;
+
     public IResponse Handle(IRequest req) {
+        if (isFirst) {
+            System.out.println("T4: " + System.currentTimeMillis());
+            isFirst = false;
+        } else {
+            System.out.println("T5: " + System.currentTimeMillis());
+        }
         List<GarbageCollectorMXBean> gcs = ManagementFactory.getGarbageCollectorMXBeans();
         GarbageCollectorMXBean scavenge = gcs.get(0);
         GarbageCollectorMXBean markSweep = gcs.get(1);
@@ -53,6 +56,7 @@ public class Handler implements com.thumbnailator.model.IHandler {
 
         Response res = new Response();
         res.setBody(output);
+        System.out.println("T6: " + System.currentTimeMillis());
         return res;
     }
 
