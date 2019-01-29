@@ -8,8 +8,8 @@ import java.lang.management.ManagementFactory;
 import java.util.List;
 import java.lang.Error;
 import net.coobird.thumbnailator.Thumbnails;
-import java.net.URL;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import javax.imageio.ImageIO;
 
 public class Handler implements com.thumbnailator.model.IHandler {
@@ -18,10 +18,10 @@ public class Handler implements com.thumbnailator.model.IHandler {
 
     public IResponse Handle(IRequest req) {
         if (isFirst) {
-            System.out.println("T4: " + System.currentTimeMillis());
+            System.err.println("T4: " + System.currentTimeMillis());
             isFirst = false;
         } else {
-            System.out.println("T5: " + System.currentTimeMillis());
+            System.err.println("T5: " + System.currentTimeMillis());
         }
         List<GarbageCollectorMXBean> gcs = ManagementFactory.getGarbageCollectorMXBeans();
         GarbageCollectorMXBean scavenge = gcs.get(0);
@@ -56,7 +56,7 @@ public class Handler implements com.thumbnailator.model.IHandler {
 
         Response res = new Response();
         res.setBody(output);
-        System.out.println("T6: " + System.currentTimeMillis());
+        System.err.println("T6: " + System.currentTimeMillis());
         return res;
     }
 
@@ -65,8 +65,7 @@ public class Handler implements com.thumbnailator.model.IHandler {
     static {
         try{
             scale = Double.parseDouble(System.getenv("scale"));
-            image = ImageIO.read(new URL(System.getenv("image_url")));
-
+            image = ImageIO.read(new File(System.getenv("image_path")));
         } catch(Exception e) {
             System.err.println(e.getMessage());
         }
