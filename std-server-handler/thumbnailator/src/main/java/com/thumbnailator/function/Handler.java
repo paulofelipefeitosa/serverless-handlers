@@ -1,8 +1,5 @@
 package com.thumbnailator.function;
 
-import com.thumbnailator.model.IResponse;
-import com.thumbnailator.model.IRequest;
-import com.thumbnailator.model.Response;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.util.List;
@@ -12,17 +9,10 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import javax.imageio.ImageIO;
 
-public class Handler implements com.thumbnailator.model.IHandler {
+public class Handler {
 
-    private static boolean isFirst = true;
-
-    public IResponse Handle(IRequest req) {
-        if (isFirst) {
-            System.err.println("T4: " + System.currentTimeMillis());
-            isFirst = false;
-        } else {
-            System.err.println("T5: " + System.currentTimeMillis());
-        }
+    public static void main(String[] args) {
+        System.err.println("T5: " + System.currentTimeMillis());
         List<GarbageCollectorMXBean> gcs = ManagementFactory.getGarbageCollectorMXBeans();
         GarbageCollectorMXBean scavenge = gcs.get(0);
         GarbageCollectorMXBean markSweep = gcs.get(1);
@@ -47,47 +37,51 @@ public class Handler implements com.thumbnailator.model.IHandler {
         String output = err + System.lineSeparator();
         if (err.length() == 0) {
             output = Long.toString(pid) + "," + // Pid
-                Long.toString(after - before) + "," + // Business Logic Time in Milliseconds
-                Long.toString(countAfterScavenge - countBeforeScavenge) + "," + // Scavenge Number of Collections
-                Long.toString(timeAfterScavenge - timeBeforeScavenge) + "," + // Scavenge Collections Time Spent in Milliseconds
-                Long.toString(countAfterMarkSweep - countBeforeMarkSweep) + "," + // MarkSweep Number of Collections
-                Long.toString(timeAfterMarkSweep - timeBeforeMarkSweep); // MarkSweep Collections Time Spent in Milliseconds
+                    Long.toString(after - before) + "," + // Business Logic Time in Milliseconds
+                    Long.toString(countAfterScavenge - countBeforeScavenge) + "," + // Scavenge
+                                                                                    // Number of
+                                                                                    // Collections
+                    Long.toString(timeAfterScavenge - timeBeforeScavenge) + "," + // Scavenge
+                                                                                  // Collections
+                                                                                  // Time Spent in
+                                                                                  // Milliseconds
+                    Long.toString(countAfterMarkSweep - countBeforeMarkSweep) + "," + // MarkSweep
+                                                                                      // Number of
+                                                                                      // Collections
+                    Long.toString(timeAfterMarkSweep - timeBeforeMarkSweep); // MarkSweep
+                                                                             // Collections Time
+                                                                             // Spent in
+                                                                             // Milliseconds
         }
 
-        Response res = new Response();
-        res.setBody(output);
+        System.out.println(output);
         System.err.println("T6: " + System.currentTimeMillis());
-        return res;
     }
 
     static double scale;
     static BufferedImage image;
     static {
-        try{
+        try {
             scale = Double.parseDouble(System.getenv("scale"));
             image = ImageIO.read(new File(System.getenv("image_path")));
-        } catch(Exception e) {
+        } catch (Exception e) {
             System.err.println(e.getMessage());
         }
     }
 
-    public String callFunction() {
+    public static String callFunction() {
         String err = "";
         try {
-            Thumbnails.of(image)
-                .scale(scale)
-                .asBufferedImage();
-        	
+            Thumbnails.of(image).scale(scale).asBufferedImage();
+
         } catch (Exception e) {
-            err = e.toString() + System.lineSeparator()
-            		+ e.getCause() + System.lineSeparator()
-            		+ e.getMessage();
+            err = e.toString() + System.lineSeparator() + e.getCause() + System.lineSeparator()
+                    + e.getMessage();
             e.printStackTrace();
-           
+
         } catch (Error e) {
-            err = e.toString() + System.lineSeparator()
-            		+ e.getCause() + System.lineSeparator()
-            		+ e.getMessage();
+            err = e.toString() + System.lineSeparator() + e.getCause() + System.lineSeparator()
+                    + e.getMessage();
             e.printStackTrace();
         }
 
