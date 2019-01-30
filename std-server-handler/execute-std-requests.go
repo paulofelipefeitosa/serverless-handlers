@@ -46,10 +46,6 @@ func main() {
 		
 		fmt.Printf("%s,%d,%d\n", "RuntimeReadyTime", i, startHandlerServiceTS - startHandlerTS)
 		fmt.Printf("%s,%d,%d\n", "ServiceTime", i, endHandlerServiceTS - startHandlerServiceTS)
-
-		if err := upServerCmd.Process.Kill(); err != nil {
-			log.Fatal("failed to kill process: ", err)
-		}
 	}
 
 }
