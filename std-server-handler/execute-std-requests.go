@@ -14,6 +14,7 @@ import(
 func main() {
 	nRequests, err := strconv.ParseInt(os.Args[1], 10, 64)
 	jarPath := os.Args[2]
+	executionID := os.Args[3]
 
 	if err != nil {
 		log.Fatal(err)
@@ -46,10 +47,10 @@ func main() {
 		
 		upServerCmd.Process.Wait()
 
-		fmt.Printf("%s,%d,%d\n", "RuntimeReadyTime", i, startHandlerServiceTS - startHandlerTS)
-		fmt.Printf("%s,%d,%d\n", "ServiceTime", i, endHandlerServiceTS - startHandlerServiceTS)
+		fmt.Printf("%s,%s,%d\n", "RuntimeReadyTime", executionID, startHandlerServiceTS - startHandlerTS)
+		fmt.Printf("%s,%s,%d\n", "ServiceTime", executionID, endHandlerServiceTS - startHandlerServiceTS)
 
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
 	}
 
 }

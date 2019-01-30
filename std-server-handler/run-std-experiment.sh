@@ -28,5 +28,5 @@ echo "Metric,Id,Value" > $RESULTS_FILENAME
 for i in $(seq "$REP")
 do
 	echo "Rep $i..."
-	scale=0.1 image_path=$IMAGE_PATH ./execute-std-requests $REP $JAR_PATH >> $RESULTS_FILENAME
+	scale=0.1 image_path=$IMAGE_PATH ./execute-std-requests $REP $JAR_PATH $i >> $RESULTS_FILENAME
 done
