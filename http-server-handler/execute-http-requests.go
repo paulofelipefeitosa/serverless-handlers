@@ -17,13 +17,14 @@ func main() {
 	endpoint := os.Args[2]
 	nRequests, err := strconv.ParseInt(os.Args[3], 10, 64)
 	executionID := os.Args[4]
+	jarPath := os.Args[5]
 
 	if err != nil {
 		log.Fatal(err)
 	}
 	functionURL := fmt.Sprintf("http://%s%s", serverAddress, endpoint)
 
-	upServerCmd := exec.Command("java", "-jar", "target/thumbnailator-server-maven-0.0.1-SNAPSHOT.jar")
+	upServerCmd := exec.Command("java", "-jar", jarPath)
 	upServerCmd.Env = os.Environ()
 	
 	serverSTDOUT, err := upServerCmd.StdoutPipe()
@@ -68,6 +69,7 @@ func main() {
 	if err := upServerCmd.Process.Kill(); err != nil {
 		log.Fatal("failed to kill process: ", err)
 	}
+	upServerCmd.Process.Wait()
 }
 
 func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverSTDOUT io.ReadCloser) ([]int64, []int64) {

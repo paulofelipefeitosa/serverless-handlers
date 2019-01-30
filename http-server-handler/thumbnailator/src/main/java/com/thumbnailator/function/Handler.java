@@ -18,10 +18,10 @@ public class Handler implements com.thumbnailator.model.IHandler {
 
     public IResponse Handle(IRequest req) {
         if (isFirst) {
-            System.err.println("T4: " + System.currentTimeMillis());
+            System.out.println("T4: " + System.currentTimeMillis());
             isFirst = false;
         } else {
-            System.err.println("T5: " + System.currentTimeMillis());
+            System.out.println("T5: " + System.currentTimeMillis());
         }
         List<GarbageCollectorMXBean> gcs = ManagementFactory.getGarbageCollectorMXBeans();
         GarbageCollectorMXBean scavenge = gcs.get(0);
@@ -56,7 +56,7 @@ public class Handler implements com.thumbnailator.model.IHandler {
 
         Response res = new Response();
         res.setBody(output);
-        System.err.println("T6: " + System.currentTimeMillis());
+        System.out.println("T6: " + System.currentTimeMillis());
         return res;
     }
 
