@@ -8,6 +8,7 @@ import(
 	"strconv"
 	"fmt"
 	"io"
+	"io/ioutil"
 )
 
 func main() {
@@ -22,7 +23,7 @@ func main() {
 		upServerCmd := exec.Command("java", "-jar", jarPath)
 		upServerCmd.Env = os.Environ()
 		
-		stderrPipe, _, _, err := getPipes(upServerCmd)
+		stderrPipe, stdinPipe, stdoutPipe, err := getPipes(upServerCmd)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -37,9 +38,18 @@ func main() {
 		fmt.Fscanf(stderrPipe, "T6: %d", &endHandlerServiceTS)
 		startHandlerServiceTS *= 1e6
 		endHandlerServiceTS *= 1e6
+
+		io.Copy(ioutil.Discard, stdoutPipe)
+		stderrPipe.Close()
+		stdinPipe.Close()
+		stdoutPipe.Close()
 		
 		fmt.Printf("%s,%d,%d\n", "RuntimeReadyTime", i, startHandlerServiceTS - startHandlerTS)
 		fmt.Printf("%s,%d,%d\n", "ServiceTime", i, endHandlerServiceTS - startHandlerServiceTS)
+
+		if err := upServerCmd.Process.Kill(); err != nil {
+			log.Fatal("failed to kill process: ", err)
+		}
 	}
 
 }
