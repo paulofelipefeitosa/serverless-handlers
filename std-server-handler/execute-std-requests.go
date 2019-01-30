@@ -44,8 +44,12 @@ func main() {
 		stdinPipe.Close()
 		stdoutPipe.Close()
 		
+		upServerCmd.Process.Wait()
+
 		fmt.Printf("%s,%d,%d\n", "RuntimeReadyTime", i, startHandlerServiceTS - startHandlerTS)
 		fmt.Printf("%s,%d,%d\n", "ServiceTime", i, endHandlerServiceTS - startHandlerServiceTS)
+
+		time.Sleep(50 * time.Millisecond)
 	}
 
 }
