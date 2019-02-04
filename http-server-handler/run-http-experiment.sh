@@ -23,10 +23,10 @@ RESULTS_FILENAME=http-server-handler-$APP-"$(date +%s)"-"$REP".csv
 echo "Number of executions [$REP]"
 echo "Results filename [$RESULTS_FILENAME]"
 
-echo "Metric,Id,Value" > $RESULTS_FILENAME
+echo "Metric,ExecID,ReqID,Value" > $RESULTS_FILENAME
 
 for i in $(seq "$REP")
 do
 	echo "Rep $i..."
 	scale=0.1 image_path=$IMAGE_PATH ./execute-http-requests localhost:9000 / $REP $i $JAR_PATH >> $RESULTS_FILENAME
-done
+	
