@@ -23,7 +23,7 @@ RESULTS_FILENAME=http-server-handler-$APP-"$(date +%s)"-"$REP".csv
 echo "Number of executions [$REP]"
 echo "Results filename [$RESULTS_FILENAME]"
 
-echo "Metric,Id,Value" > $RESULTS_FILENAME
+echo "Metric,ExecID,ReqID,Value" > $RESULTS_FILENAME
 
 for i in $(seq "$REP")
 do
