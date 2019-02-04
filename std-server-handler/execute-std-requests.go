@@ -37,6 +37,8 @@ func main() {
 		var startHandlerServiceTS, endHandlerServiceTS int64
 		fmt.Fscanf(stderrPipe, "T5: %d", &startHandlerServiceTS)
 		fmt.Fscanf(stderrPipe, "T6: %d", &endHandlerServiceTS)
+		endHandlerTS := time.Now().UTC().UnixNano()
+		
 		startHandlerServiceTS *= 1e6
 		endHandlerServiceTS *= 1e6
 
@@ -47,8 +49,9 @@ func main() {
 		
 		upServerCmd.Process.Wait()
 
-		fmt.Printf("%s,%s,%d\n", "RuntimeReadyTime", executionID, startHandlerServiceTS - startHandlerTS)
-		fmt.Printf("%s,%s,%d\n", "ServiceTime", executionID, endHandlerServiceTS - startHandlerServiceTS)
+		fmt.Printf("%s,%s,%d,%d\n", "RuntimeReadyTime", executionID, i, startHandlerServiceTS - startHandlerTS)
+		fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, i, endHandlerServiceTS - startHandlerServiceTS)
+		fmt.Printf("%s,%s,%d,%d\n", "RoundTripTime", executionID, i, endHandlerTS - startHandlerTS)
 
 		time.Sleep(5 * time.Millisecond)
 	}
