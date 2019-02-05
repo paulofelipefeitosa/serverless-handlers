@@ -39,12 +39,12 @@ func main() {
 	httpServerReadyTS, httpServerServiceTS, err := getHTTPServerReadyAndServiceTS(functionURL, serverSTDOUT)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Max tries reached")
-		fmt.Fprintln(os.Stderr, err)
 		
 		// Kill Http server process
 		if err := upServerCmd.Process.Kill(); err != nil {
 			log.Fatal("failed to kill process: ", err)
 		}
+		log.Fatal(err)
 	}
 	millis2Nano := int64(1e6)
 	httpServerReadyTS *= millis2Nano
@@ -57,8 +57,8 @@ func main() {
 	fmt.Printf("%s,%s,%d,%d\n", "RuntimeReadyTime", executionID, 0, httpServerReadyTS - startHTTPServerTS)
 	fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, 0, httpServerServiceTS - startHTTPServerTS)
 	for i := 1; i <= len(roundTrip); i++ {
-		fmt.Printf("%s,%s,%d,%d\n", "RoundTripTime", executionID, i, roundTrip[i])
-		fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, i, serviceTime[i])
+		fmt.Printf("%s,%s,%d,%d\n", "RoundTripTime", executionID, i, roundTrip[i - 1])
+		fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, i, serviceTime[i - 1])
 	}
 
 	fmt.Fprintln(os.Stderr, fmt.Sprintf("End of execution: %s", executionID))
