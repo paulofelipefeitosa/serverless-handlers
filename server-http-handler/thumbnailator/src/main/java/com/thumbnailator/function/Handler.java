@@ -14,15 +14,8 @@ import javax.imageio.ImageIO;
 
 public class Handler implements com.thumbnailator.model.IHandler {
 
-    private static boolean isFirst = true;
-
     public IResponse Handle(IRequest req) {
-        if (isFirst) {
-            System.out.println("T4: " + System.currentTimeMillis());
-            isFirst = false;
-        } else {
-            System.out.println("T5: " + System.currentTimeMillis());
-        }
+        System.out.println("T4: " + System.currentTimeMillis());
         List<GarbageCollectorMXBean> gcs = ManagementFactory.getGarbageCollectorMXBeans();
         GarbageCollectorMXBean scavenge = gcs.get(0);
         GarbageCollectorMXBean markSweep = gcs.get(1);
