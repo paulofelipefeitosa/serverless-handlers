@@ -77,7 +77,7 @@ func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverSTDOU
 	for i := int64(0); i < nRequests; i++ {
 		response, err, sendRequestTS, receiveResponseTS := sendRequest2(functionURL)
 		if response.StatusCode == http.StatusOK {
-			fmt.Fscanf(serverSTDOUT, "T5: %d", &startServiceTS)
+			fmt.Fscanf(serverSTDOUT, "T4: %d", &startServiceTS)
 			fmt.Fscanf(serverSTDOUT, "T6: %d", &endServiceTS)
 			
 			roundTrip = append(roundTrip, receiveResponseTS - sendRequestTS)
