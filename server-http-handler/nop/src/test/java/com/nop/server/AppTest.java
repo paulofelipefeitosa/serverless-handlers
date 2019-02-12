@@ -1,4 +1,6 @@
-package com.thumbnailator.server;
+package com.nop.server;
+
+import com.nop.server.AppTest;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -36,3 +38,4 @@ public class AppTest
         assertTrue( true );
     }
 }
+
