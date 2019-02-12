@@ -1,6 +1,6 @@
-package com.nop.server;
+package com.noop.server;
 
-import com.nop.server.AppTest;
+import com.noop.server.AppTest;
 
 import junit.framework.Test;
 import junit.framework.TestCase;

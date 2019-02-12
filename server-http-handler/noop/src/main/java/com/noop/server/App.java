@@ -1,4 +1,4 @@
-package com.nop.server;
+package com.noop.server;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-import com.nop.model.*;
+import com.noop.model.*;
 import com.sun.net.httpserver.Headers;
 
 public class App {
@@ -22,7 +22,7 @@ public class App {
     public static void main(String[] args) throws Exception {
         int port = 9000;
 
-        IHandler handler = new com.nop.function.Handler();
+        IHandler handler = new com.noop.function.Handler();
 
         InetSocketAddress addr = new InetSocketAddress(port);
         HttpServer server = HttpServer.create(addr, 0);
@@ -57,7 +57,6 @@ public class App {
                 requestBody = result.toString("UTF-8");
             }
 
-            // System.out.println(requestBody);
             Headers reqHeaders = t.getRequestHeaders();
             Map<String, String> reqHeadersMap = new HashMap<String, String>();
 
@@ -68,9 +67,6 @@ public class App {
                 }
             }
 
-            // for(Map.Entry<String, String> entry : reqHeadersMap.entrySet()) {
-            // System.out.println("Req header " + entry.getKey() + " " + entry.getValue());
-            // }
 
             IRequest req = new Request(requestBody, reqHeadersMap, t.getRequestURI().getRawQuery(),
                     t.getRequestURI().getPath());
@@ -96,8 +92,6 @@ public class App {
             os.write(bytesOut);
             os.close();
 
-            // System.out.println("Request / " + Integer.toString(bytesOut.length) +" bytes
-            // written.");
         }
     }
 
