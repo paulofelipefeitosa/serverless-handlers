@@ -15,7 +15,7 @@ import javax.imageio.ImageIO;
 public class Handler implements com.thumbnailator.model.IHandler {
 
     public IResponse Handle(IRequest req) {
-        System.err.println("T4: " + System.currentTimeMillis());
+        System.out.println("T4: " + System.currentTimeMillis());
         List<GarbageCollectorMXBean> gcs = ManagementFactory.getGarbageCollectorMXBeans();
         GarbageCollectorMXBean scavenge = gcs.get(0);
         GarbageCollectorMXBean markSweep = gcs.get(1);
@@ -49,7 +49,7 @@ public class Handler implements com.thumbnailator.model.IHandler {
 
         Response res = new Response();
         res.setBody(output);
-        System.err.println("T6: " + System.currentTimeMillis());
+        System.out.println("T6: " + System.currentTimeMillis());
         return res;
     }
 
