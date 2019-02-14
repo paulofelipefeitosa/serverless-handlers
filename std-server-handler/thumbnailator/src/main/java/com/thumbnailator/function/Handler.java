@@ -7,55 +7,66 @@ import java.lang.Error;
 import net.coobird.thumbnailator.Thumbnails;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
+
 import javax.imageio.ImageIO;
 
 public class Handler {
 
-    public static void main(String[] args) {
-        System.err.println("T5: " + System.currentTimeMillis());
-        List<GarbageCollectorMXBean> gcs = ManagementFactory.getGarbageCollectorMXBeans();
-        GarbageCollectorMXBean scavenge = gcs.get(0);
-        GarbageCollectorMXBean markSweep = gcs.get(1);
+    public static void main(String[] args) throws IOException {
+    	while (true) {
+    		System.err.println("T5: " + System.currentTimeMillis());
+    		
+    		getCharFromStdin();
+    		
+            List<GarbageCollectorMXBean> gcs = ManagementFactory.getGarbageCollectorMXBeans();
+            GarbageCollectorMXBean scavenge = gcs.get(0);
+            GarbageCollectorMXBean markSweep = gcs.get(1);
 
-        long countBeforeScavenge = scavenge.getCollectionCount();
-        long timeBeforeScavenge = scavenge.getCollectionTime();
-        long countBeforeMarkSweep = markSweep.getCollectionCount();
-        long timeBeforeMarkSweep = markSweep.getCollectionTime();
-        long before = System.currentTimeMillis();
+            long countBeforeScavenge = scavenge.getCollectionCount();
+            long timeBeforeScavenge = scavenge.getCollectionTime();
+            long countBeforeMarkSweep = markSweep.getCollectionCount();
+            long timeBeforeMarkSweep = markSweep.getCollectionTime();
+            long before = System.currentTimeMillis();
 
-        String err = callFunction();
+            String err = callFunction();
 
-        long after = System.currentTimeMillis();
-        long countAfterScavenge = scavenge.getCollectionCount();
-        long timeAfterScavenge = scavenge.getCollectionTime();
-        long countAfterMarkSweep = markSweep.getCollectionCount();
-        long timeAfterMarkSweep = markSweep.getCollectionTime();
+            long after = System.currentTimeMillis();
+            long countAfterScavenge = scavenge.getCollectionCount();
+            long timeAfterScavenge = scavenge.getCollectionTime();
+            long countAfterMarkSweep = markSweep.getCollectionCount();
+            long timeAfterMarkSweep = markSweep.getCollectionTime();
 
-        String processName = java.lang.management.ManagementFactory.getRuntimeMXBean().getName();
-        long pid = Long.parseLong(processName.split("@")[0]);
+            String processName = java.lang.management.ManagementFactory.getRuntimeMXBean().getName();
+            long pid = Long.parseLong(processName.split("@")[0]);
 
-        String output = err + System.lineSeparator();
-        if (err.length() == 0) {
-            output = Long.toString(pid) + "," + // Pid
-                    Long.toString(after - before) + "," + // Business Logic Time in Milliseconds
-                    Long.toString(countAfterScavenge - countBeforeScavenge) + "," + // Scavenge
-                                                                                    // Number of
-                                                                                    // Collections
-                    Long.toString(timeAfterScavenge - timeBeforeScavenge) + "," + // Scavenge
-                                                                                  // Collections
-                                                                                  // Time Spent in
-                                                                                  // Milliseconds
-                    Long.toString(countAfterMarkSweep - countBeforeMarkSweep) + "," + // MarkSweep
-                                                                                      // Number of
+            String output = err + System.lineSeparator();
+            if (err.length() == 0) {
+                output = Long.toString(pid) + "," + // Pid
+                        Long.toString(after - before) + "," + // Business Logic Time in Milliseconds
+                        Long.toString(countAfterScavenge - countBeforeScavenge) + "," + // Scavenge
+                                                                                        // Number of
+                                                                                        // Collections
+                        Long.toString(timeAfterScavenge - timeBeforeScavenge) + "," + // Scavenge
                                                                                       // Collections
-                    Long.toString(timeAfterMarkSweep - timeBeforeMarkSweep); // MarkSweep
-                                                                             // Collections Time
-                                                                             // Spent in
-                                                                             // Milliseconds
-        }
+                                                                                      // Time Spent in
+                                                                                      // Milliseconds
+                        Long.toString(countAfterMarkSweep - countBeforeMarkSweep) + "," + // MarkSweep
+                                                                                          // Number of
+                                                                                          // Collections
+                        Long.toString(timeAfterMarkSweep - timeBeforeMarkSweep); // MarkSweep
+                                                                                 // Collections Time
+                                                                                 // Spent in
+                                                                                 // Milliseconds
+            }
 
-        System.out.println(output);
-        System.err.println("T6: " + System.currentTimeMillis());
+            System.out.println(output);
+            System.err.println("T6: " + System.currentTimeMillis());
+    	}
+    }
+    
+    private static char getCharFromStdin() throws IOException {
+    	return (char) System.in.read();
     }
 
     static double scale;
