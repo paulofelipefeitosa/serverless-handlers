@@ -23,7 +23,7 @@ IMAGE_NAME=$(basename $IMAGE_URL)
 wget -O $IMAGE_NAME $IMAGE_URL
 IMAGE_PATH=$(pwd)/$IMAGE_NAME
 
-echo "Starting experiment of Handler [$HANDLER_TYPE]"
+echo "Starting experiment"
 
 RESULTS_FILENAME=$TYPE_DIR-$APP_NAME-"$(date +%s)"-$REP.csv
 
@@ -40,6 +40,7 @@ do
 		scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME localhost:9000 / $REP $i $JAR_PATH >> $RESULTS_FILENAME
 	elif [ "$TYPE_DIR" == "std-server-handler" ]
 	then
+		echo "STD Handler of Type [$HANDLER_TYPE]"
 		scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $REP $JAR_PATH $i $HANDLER_TYPE >> $RESULTS_FILENAME
 	else 
 		echo "Could not identify the experiment type [$TYPE_DIR]"

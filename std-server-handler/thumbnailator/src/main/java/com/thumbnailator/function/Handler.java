@@ -13,90 +13,88 @@ import javax.imageio.ImageIO;
 
 public class Handler {
 
-    public static void main(String[] args) throws IOException {
-    	while (true) {
-    		System.err.println("T5: " + System.currentTimeMillis());
-    		
-    		getCharFromStdin();
-    		
-            List<GarbageCollectorMXBean> gcs = ManagementFactory.getGarbageCollectorMXBeans();
-            GarbageCollectorMXBean scavenge = gcs.get(0);
-            GarbageCollectorMXBean markSweep = gcs.get(1);
+	public static void main(String[] args) throws IOException {
+		while (true) {
+			System.err.println("T5: " + System.currentTimeMillis());
 
-            long countBeforeScavenge = scavenge.getCollectionCount();
-            long timeBeforeScavenge = scavenge.getCollectionTime();
-            long countBeforeMarkSweep = markSweep.getCollectionCount();
-            long timeBeforeMarkSweep = markSweep.getCollectionTime();
-            long before = System.currentTimeMillis();
+			getCharFromStdin();
 
-            String err = callFunction();
+			List<GarbageCollectorMXBean> gcs = ManagementFactory.getGarbageCollectorMXBeans();
+			GarbageCollectorMXBean scavenge = gcs.get(0);
+			GarbageCollectorMXBean markSweep = gcs.get(1);
 
-            long after = System.currentTimeMillis();
-            long countAfterScavenge = scavenge.getCollectionCount();
-            long timeAfterScavenge = scavenge.getCollectionTime();
-            long countAfterMarkSweep = markSweep.getCollectionCount();
-            long timeAfterMarkSweep = markSweep.getCollectionTime();
+			long countBeforeScavenge = scavenge.getCollectionCount();
+			long timeBeforeScavenge = scavenge.getCollectionTime();
+			long countBeforeMarkSweep = markSweep.getCollectionCount();
+			long timeBeforeMarkSweep = markSweep.getCollectionTime();
+			long before = System.currentTimeMillis();
 
-            String processName = java.lang.management.ManagementFactory.getRuntimeMXBean().getName();
-            long pid = Long.parseLong(processName.split("@")[0]);
+			String err = callFunction();
 
-            String output = err + System.lineSeparator();
-            if (err.length() == 0) {
-                output = Long.toString(pid) + "," + // Pid
-                        Long.toString(after - before) + "," + // Business Logic Time in Milliseconds
-                        Long.toString(countAfterScavenge - countBeforeScavenge) + "," + // Scavenge
-                                                                                        // Number of
-                                                                                        // Collections
-                        Long.toString(timeAfterScavenge - timeBeforeScavenge) + "," + // Scavenge
-                                                                                      // Collections
-                                                                                      // Time Spent in
-                                                                                      // Milliseconds
-                        Long.toString(countAfterMarkSweep - countBeforeMarkSweep) + "," + // MarkSweep
-                                                                                          // Number of
-                                                                                          // Collections
-                        Long.toString(timeAfterMarkSweep - timeBeforeMarkSweep); // MarkSweep
-                                                                                 // Collections Time
-                                                                                 // Spent in
-                                                                                 // Milliseconds
-            }
+			long after = System.currentTimeMillis();
+			long countAfterScavenge = scavenge.getCollectionCount();
+			long timeAfterScavenge = scavenge.getCollectionTime();
+			long countAfterMarkSweep = markSweep.getCollectionCount();
+			long timeAfterMarkSweep = markSweep.getCollectionTime();
 
-            System.out.println(output);
-            System.err.println("T6: " + System.currentTimeMillis());
-    	}
-    }
-    
-    private static char getCharFromStdin() throws IOException {
-    	return (char) System.in.read();
-    }
+			String processName = java.lang.management.ManagementFactory.getRuntimeMXBean().getName();
+			long pid = Long.parseLong(processName.split("@")[0]);
 
-    static double scale;
-    static BufferedImage image;
-    static {
-        try {
-            scale = Double.parseDouble(System.getenv("scale"));
-            image = ImageIO.read(new File(System.getenv("image_path")));
-        } catch (Exception e) {
-            System.err.println(e.getMessage());
-        }
-    }
+			String output = err + System.lineSeparator();
+			if (err.length() == 0) {
+				output = Long.toString(pid) + "," + // Pid
+						Long.toString(after - before) + "," + // Business Logic Time in Milliseconds
+						Long.toString(countAfterScavenge - countBeforeScavenge) + "," + // Scavenge
+																						// Number of
+																						// Collections
+						Long.toString(timeAfterScavenge - timeBeforeScavenge) + "," + // Scavenge
+																						// Collections
+																						// Time Spent in
+																						// Milliseconds
+						Long.toString(countAfterMarkSweep - countBeforeMarkSweep) + "," + // MarkSweep
+																							// Number of
+																							// Collections
+						Long.toString(timeAfterMarkSweep - timeBeforeMarkSweep); // MarkSweep
+																					// Collections Time
+																					// Spent in
+																					// Milliseconds
+			}
 
-    public static String callFunction() {
-        String err = "";
-        try {
-            Thumbnails.of(image).scale(scale).asBufferedImage();
+			System.out.println(output);
+			System.err.println("T6: " + System.currentTimeMillis());
+		}
+	}
 
-        } catch (Exception e) {
-            err = e.toString() + System.lineSeparator() + e.getCause() + System.lineSeparator()
-                    + e.getMessage();
-            e.printStackTrace();
+	private static char getCharFromStdin() throws IOException {
+		return (char) System.in.read();
+	}
 
-        } catch (Error e) {
-            err = e.toString() + System.lineSeparator() + e.getCause() + System.lineSeparator()
-                    + e.getMessage();
-            e.printStackTrace();
-        }
+	static double scale;
+	static BufferedImage image;
+	static {
+		try {
+			scale = Double.parseDouble(System.getenv("scale"));
+			image = ImageIO.read(new File(System.getenv("image_path")));
+		} catch (Exception e) {
+			System.err.println(e.getMessage());
+		}
+	}
 
-        return err;
-    }
+	public static String callFunction() {
+		String err = "";
+		try {
+			Thumbnails.of(image).scale(scale).asBufferedImage();
+
+		} catch (Exception e) {
+			err = e.toString() + System.lineSeparator() + e.getCause() + System.lineSeparator() + e.getMessage();
+			e.printStackTrace();
+
+		} catch (Error e) {
+			err = e.toString() + System.lineSeparator() + e.getCause() + System.lineSeparator() + e.getMessage();
+			e.printStackTrace();
+		}
+
+		return err;
+	}
 
 }
