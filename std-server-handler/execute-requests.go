@@ -15,24 +15,27 @@ func main() {
 	nRequests, err := strconv.ParseInt(os.Args[1], 10, 64)
 	jarPath := os.Args[2]
 	executionID := os.Args[3]
+	handlerType := os.Args[4]
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	for i := int64(0); i < nRequests; i++ {
-		upServerCmd := exec.Command("java", "-jar", jarPath)
-		upServerCmd.Env = os.Environ()
-		
-		stderrPipe, stdinPipe, stdoutPipe, err := getPipes(upServerCmd)
-		if err != nil {
-			log.Fatal(err)
+		if handlerType != "persistent" || i == 0 {
+			upServerCmd := commandSetup(jarPath)
+			
+			stderrPipe, stdinPipe, stdoutPipe, err := getPipes(upServerCmd)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			startHandlerTS, err := startService(upServerCmd)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 
-		startHandlerTS := time.Now().UTC().UnixNano()
-		if err := upServerCmd.Start(); err != nil {
-			log.Fatal(err)
-		}
 		// escrever no stdin
 		var startHandlerServiceTS, endHandlerServiceTS int64
 		fmt.Fscanf(stderrPipe, "T5: %d", &startHandlerServiceTS)
@@ -42,12 +45,16 @@ func main() {
 		startHandlerServiceTS *= 1e6
 		endHandlerServiceTS *= 1e6
 
-		io.Copy(ioutil.Discard, stdoutPipe)
-		stderrPipe.Close()
-		stdinPipe.Close()
-		stdoutPipe.Close()
-		
-		upServerCmd.Process.Wait()
+		if handlerType != "persistent" {
+			closePipes(stderrPipe, stdinPipe, stdoutPipe)
+			upServerCmd.Process.Wait()
+		} else if i == (nRequests - 1) {
+			closePipes(stderrPipe, stdinPipe, stdoutPipe)
+			if err := upServerCmd.Process.Kill(); err != nil {
+				log.Fatal(err)
+			}
+			upServerCmd.Process.Wait()
+		}
 
 		fmt.Printf("%s,%s,%d,%d\n", "RuntimeReadyTime", executionID, i, startHandlerServiceTS - startHandlerTS)
 		fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, i, endHandlerServiceTS - startHandlerServiceTS)
@@ -56,6 +63,25 @@ func main() {
 		time.Sleep(5 * time.Millisecond)
 	}
 
+}
+
+func commandSetup(string jarPath) (Cmd) {
+	cmd := exec.Command("java", "-jar", jarPath)
+	cmd.Env := os.Environ()
+	return cmd
+}
+
+func startService(serviceCmd Cmd) (int64, error) {
+	startServiceTS := time.Now().UTC().UnixNano()
+	return startServiceTS, serviceCmd.Start()
+}
+
+func closePipes(stderr io.ReadCloser, stdin io.WriteCloser, stdout io.ReadCloser) {
+	io.Copy(ioutil.Discard, stdoutPipe)
+	io.Copy(ioutil.Discard, stderrPipe)
+	stderrPipe.Close()
+	stdinPipe.Close()
+	stdoutPipe.Close()
 }
 
 func getPipes(command* exec.Cmd) (io.ReadCloser, io.WriteCloser, io.ReadCloser, error) {
