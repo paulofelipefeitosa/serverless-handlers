@@ -21,10 +21,13 @@ then
 	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"/usr/lib/jvm/java-8-oracle/include/" -I"/usr/lib/jvm/java-8-oracle/include/linux/" GC.c -o libgc.so
 
 	echo "Running $APP_DIR App"
+	rm $CRIU_APP_OUTPUT
 	setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App  < /dev/null &> $CRIU_APP_OUTPUT &
 
 	echo "Warming $APP_DIR App"
-	curl http://$HTTP_SERVER_ADDRESS/ping
+	while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://$HTTP_SERVER_ADDRESS/ping)" != "200" ]]; 
+	    do sleep 5; 
+    done
 	curl http://$HTTP_SERVER_ADDRESS/gc
 
 	echo "Dumping $APP_DIR App"
@@ -37,6 +40,7 @@ cd -
 
 echo "Building experiment"
 EXP_APP_NAME="execute-requests"
+source /etc/profile
 go build $TYPE_DIR/"$EXP_APP_NAME".go
 
 echo "Downloading image from [$IMAGE_URL]"
@@ -60,7 +64,7 @@ do
 	then
 		if [ "$HANDLER_TYPE" == "criu" ];
 		then
-			scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP $i $APP_DIR/$JAR_NAME $HANDLER_TYPE >> $RESULTS_FILENAME
+			scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP $i $APP_DIR $HANDLER_TYPE $APP_DIR/$CRIU_APP_OUTPUT >> $RESULTS_FILENAME
 			truncate --size=0 $APP_DIR/$CRIU_APP_OUTPUT
 		else
 			scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP $i $JAR_PATH $HANDLER_TYPE >> $RESULTS_FILENAME
