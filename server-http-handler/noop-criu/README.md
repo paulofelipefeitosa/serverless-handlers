@@ -3,7 +3,7 @@
 ## Compilando
 ```sh
 javac *.java
-gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"/usr/lib/jvm/java-10.0.1-openjdk-amd64/include" -I"/usr/lib/jvm/java-10.0.1-openjdk-amd64/include/linux" GC.c -o libgc.so
+gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"/usr/lib/jvm/java-8-oracle/include/" -I"/usr/lib/jvm/java-8-oracle/include/linux/" GC.c -o libgc.so
 ```
 
 ## Executando
