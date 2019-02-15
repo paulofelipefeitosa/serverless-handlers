@@ -17,13 +17,18 @@ func main() {
 	nRequests, err := strconv.ParseInt(os.Args[3], 10, 64)
 	executionID := os.Args[4]
 	jarPath := os.Args[5]
+	handlerType := os.Args[6]
 
 	if err != nil {
 		log.Fatal(err)
 	}
 	functionURL := fmt.Sprintf("http://%s%s", serverAddress, endpoint)
 
-	upServerCmd := exec.Command("java", "-jar", jarPath)
+	if handlerType == "criu" {
+		upServerCmd := exec.Command("criu", "restore", "-d", "-vvv", "-o", jarPath)
+	} else {
+		upServerCmd := exec.Command("java", "-jar", jarPath)
+	}
 	upServerCmd.Env = os.Environ()
 	
 	serverSTDOUT, err := upServerCmd.StdoutPipe()

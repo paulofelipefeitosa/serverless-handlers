@@ -10,8 +10,29 @@ HANDLER_TYPE=$6
 APP_DIR=$TYPE_DIR/$APP_NAME
 JAR_PATH=$APP_DIR/target/$JAR_NAME
 
-echo "Building $APP_DIR App to Jar [$JAR_PATH]"
-cd $APP_DIR && mvn install
+HTTP_SERVER_ADDRESS=localhost:9000
+CRIU_APP_OUTPUT=app.log
+
+cd $APP_DIR
+if [ "$HANDLER_TYPE" == "criu" ];
+then
+	echo "Building $APP_DIR App Classes"
+	javac *.java
+	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"/usr/lib/jvm/java-10.0.1-openjdk-amd64/include" -I"/usr/lib/jvm/java-10.0.1-openjdk-amd64/include/linux" GC.c -o libgc.so
+
+	echo "Running $APP_DIR App"
+	setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App  < /dev/null &> $CRIU_APP_OUTPUT &
+
+	echo "Warming $APP_DIR App"
+	curl http://$HTTP_SERVER_ADDRESS/ping
+	curl http://$HTTP_SERVER_ADDRESS/gc
+
+	echo "Dumping $APP_DIR App"
+	sudo criu dump -t $(ps aux | grep "java -Djvmtilib" | awk 'NR==1{print $2}') -vvv -o dump.log && echo OK
+else
+	echo "Building $APP_DIR App to Jar [$JAR_PATH]"
+	mvn install
+fi
 cd -
 
 echo "Building experiment"
@@ -37,7 +58,13 @@ do
 	echo "Rep $i..."
 	if [ "$TYPE_DIR" == "server-http-handler" ];
 	then
-		scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME localhost:9000 / $REP $i $JAR_PATH >> $RESULTS_FILENAME
+		if [ "$HANDLER_TYPE" == "criu" ];
+		then
+			scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP $i $APP_DIR/restore.log $HANDLER_TYPE >> $RESULTS_FILENAME
+			truncate --size=0 $APP_DIR/$CRIU_APP_OUTPUT
+		else
+			scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP $i $JAR_PATH $HANDLER_TYPE >> $RESULTS_FILENAME
+		fi
 	elif [ "$TYPE_DIR" == "std-server-handler" ]
 	then
 		echo "STD Handler of Type [$HANDLER_TYPE]"
