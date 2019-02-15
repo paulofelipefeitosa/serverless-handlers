@@ -18,29 +18,40 @@ func main() {
 	executionID := os.Args[4]
 	jarPath := os.Args[5]
 	handlerType := os.Args[6]
+	serverLogFile := os.Args[7] 
 
 	if err != nil {
 		log.Fatal(err)
 	}
 	functionURL := fmt.Sprintf("http://%s%s", serverAddress, endpoint)
 
+    var upServerCmd* exec.Cmd
+    var serverSTDOUT io.ReadCloser
 	if handlerType == "criu" {
-		upServerCmd := exec.Command("criu", "restore", "-d", "-vvv", "-o", jarPath)
+		upServerCmd = exec.Command("criu", "restore", "-d", "-vvv", "-o", "restore.log")
+		upServerCmd.Env = os.Environ()
+		
+		currentDir, _ := os.Getwd()
+		upServerCmd.Dir = fmt.Sprintf("%s/%s", currentDir, jarPath)
+
+		serverSTDOUT, err = os.Open(serverLogFile)
 	} else {
-		upServerCmd := exec.Command("java", "-jar", jarPath)
+		upServerCmd = exec.Command("java", "-jar", jarPath)
+		upServerCmd.Env = os.Environ()
+		serverSTDOUT, err = upServerCmd.StdoutPipe()
 	}
-	upServerCmd.Env = os.Environ()
-	
-	serverSTDOUT, err := upServerCmd.StdoutPipe()
+
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Start Http Server
+	fmt.Fprintln(os.Stderr, "To Run")
 	startHTTPServerTS := time.Now().UTC().UnixNano()
 	if err := upServerCmd.Start(); err != nil {
 		log.Fatal(err)
 	}
+	fmt.Fprintln(os.Stderr, "Running")
 	httpServerReadyTS, httpServerServiceTS, err := getHTTPServerReadyAndServiceTS(functionURL, serverSTDOUT)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Max tries reached")
@@ -51,13 +62,14 @@ func main() {
 		}
 		log.Fatal(err)
 	}
+	fmt.Fprintln(os.Stderr, "Get first")
 	millis2Nano := int64(1e6)
 	httpServerReadyTS *= millis2Nano
 	httpServerServiceTS *= millis2Nano
 
 	// Apply requests
 	roundTrip, serviceTime := getRoundTripAndServiceTime(nRequests, functionURL, serverSTDOUT)
-
+    fmt.Fprintln(os.Stderr, "Getting all")
 	// Write results
 	fmt.Printf("%s,%s,%d,%d\n", "RuntimeReadyTime", executionID, 0, httpServerReadyTS - startHTTPServerTS)
 	fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, 0, httpServerServiceTS - startHTTPServerTS)
@@ -81,14 +93,17 @@ func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverSTDOU
 	millis2Nano := int64(1e6)
 	for i := int64(0); i < nRequests; i++ {
 		response, err, sendRequestTS, receiveResponseTS := sendRequest2(functionURL)
-		if response.StatusCode == http.StatusOK {
+		if err == nil && response.StatusCode == http.StatusOK {
+		    fmt.Fprintln(os.Stderr, "Try to read")
 			fmt.Fscanf(serverSTDOUT, "T4: %d", &startServiceTS)
+			fmt.Fprintln(os.Stderr, "read 1")
 			fmt.Fscanf(serverSTDOUT, "T6: %d", &endServiceTS)
+			fmt.Fprintln(os.Stderr, "read 2")
 			
 			roundTrip = append(roundTrip, receiveResponseTS - sendRequestTS)
 			serviceTime = append(serviceTime, (endServiceTS - startServiceTS) * millis2Nano)
 		} else {
-			fmt.Fprint(os.Stderr, err)
+			log.Fatal(err)
 		}
 	}
 	return roundTrip, serviceTime
@@ -103,8 +118,11 @@ func getHTTPServerReadyAndServiceTS(functionURL string, serverSTDOUT io.ReadClos
 			if resp.StatusCode == http.StatusOK {
 				io.Copy(ioutil.Discard, resp.Body)
 				resp.Body.Close()
+				fmt.Fprintln(os.Stderr, "Try to read")
 				fmt.Fscanf(serverSTDOUT, "T4: %d", &httpServerReadyTS)
+				fmt.Fprintln(os.Stderr, "read 1")
 				fmt.Fscanf(serverSTDOUT, "T6: %d", &endServiceTS)
+				fmt.Fprintln(os.Stderr, "read 2")
 				return httpServerReadyTS, endServiceTS, nil
 			} else {
 				return -1, -1, fmt.Errorf("Server is up, but HTTP response is not OK!\nStatusCode: %d\n", resp.StatusCode)
