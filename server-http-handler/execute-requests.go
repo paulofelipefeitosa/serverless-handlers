@@ -28,11 +28,14 @@ func main() {
     var upServerCmd* exec.Cmd
     var serverSTDOUT io.ReadCloser
 	if handlerType == "criu" {
-		upServerCmd = exec.Command("criu", "restore", "-d", "-vvv", "-o", "restore.log")
+		fmt.Fprintln(os.Stderr, "Criu Handler")
+		upServerCmd = exec.Command("criu", "restore", "-d", "-vvvv", "-o", "restore.log")
 		upServerCmd.Env = os.Environ()
 		
 		currentDir, _ := os.Getwd()
 		upServerCmd.Dir = fmt.Sprintf("%s/%s", currentDir, jarPath)
+
+		fmt.Fprintf(os.Stderr, "Dir [%s]\n", upServerCmd.Dir)
 
 		serverSTDOUT, err = os.Open(serverLogFile)
 	} else {
@@ -53,6 +56,7 @@ func main() {
 	}
 	fmt.Fprintln(os.Stderr, "Running")
 	httpServerReadyTS, httpServerServiceTS, err := getHTTPServerReadyAndServiceTS(functionURL, serverSTDOUT)
+	fmt.Fprintf(os.Stderr, "%d :: %d\n", httpServerReadyTS, httpServerServiceTS)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Max tries reached")
 		
@@ -80,6 +84,8 @@ func main() {
 
 	fmt.Fprintln(os.Stderr, fmt.Sprintf("End of execution: %s", executionID))
 
+	serverSTDOUT.Close()
+
 	// Kill Http server process
 	if err := upServerCmd.Process.Kill(); err != nil {
 		log.Fatal("failed to kill process: ", err)
@@ -91,7 +97,7 @@ func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverSTDOU
 	var roundTrip, serviceTime []int64
 	var startServiceTS, endServiceTS int64
 	millis2Nano := int64(1e6)
-	for i := int64(0); i < nRequests; i++ {
+	for i := int64(1); i < nRequests; i++ {
 		response, err, sendRequestTS, receiveResponseTS := sendRequest2(functionURL)
 		if err == nil && response.StatusCode == http.StatusOK {
 		    fmt.Fprintln(os.Stderr, "Try to read")
@@ -147,4 +153,3 @@ func sendRequest2(URL string) (*http.Response, error, int64, int64) {
 	}
 	return response, err, sendRequestTS.UTC().UnixNano(), receiveResponseTS.UTC().UnixNano()
 }
-
