@@ -29,7 +29,7 @@ func main() {
     var serverSTDOUT io.ReadCloser
 	if handlerType == "criu" {
 		fmt.Fprintln(os.Stderr, "Criu Handler Type")
-		upServerCmd = exec.Command("criu", "restore", "-d", "-vvvv", "-o", "restore.log")
+		upServerCmd = exec.Command("python", "criu-ns", "restore", "-d", "-vvvv", "-o", "restore.log")
 		upServerCmd.Env = os.Environ()
 		
 		currentDir, _ := os.Getwd()

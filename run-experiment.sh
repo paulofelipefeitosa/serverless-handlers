@@ -20,13 +20,10 @@ dump_criu_app() {
 	echo "Building $APP_DIR App Classes"
 	javac *.java
 	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"/usr/lib/jvm/java-8-oracle/include/" -I"/usr/lib/jvm/java-8-oracle/include/linux/" GC.c -o libgc.so
-	gcc set-pid.c -o set-pid > /dev/null 2> /dev/null
 
 	echo "Running $APP_DIR App"
 	echo "" > $CRIU_APP_OUTPUT
-	./set-pid 10000
 	setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App  < /dev/null &> $CRIU_APP_OUTPUT &
-	ps aux | grep "java -Djvmtilib"
 
 	echo "Warming $APP_DIR App"
 	while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://$HTTP_SERVER_ADDRESS/ping)" != "200" ]]; 
@@ -37,7 +34,6 @@ dump_criu_app() {
 	echo "Dumping $APP_DIR App"
 	criu dump -t $(ps aux | grep "java -Djvmtilib" | awk 'NR==1{print $2}') -vvv -o dump.log
 	DUMP_EXIT_STATUS=$?
-	./set-pid 500
 	if [ $DUMP_EXIT_STATUS -ne 0 ];
 	then
 		echo "Dump App $APP_DIR failed"
@@ -92,7 +88,6 @@ do
 			echo "Criu HTTP Server Handler"
 			scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $APP_DIR $HANDLER_TYPE $APP_DIR/$CRIU_APP_OUTPUT >> $RESULTS_FILENAME
 
-			ps aux | grep "java -Djvmtilib"
 			PROCESS_PID=$(ps aux | grep "java -Djvmtilib" | awk 'NR==2{print $2}')
 			echo "Handler PID: [$PROCESS_PID]"
 			killall java
