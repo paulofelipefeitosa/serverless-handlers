@@ -14,9 +14,9 @@ JAR_PATH=$APP_DIR/target/$JAR_NAME
 HTTP_SERVER_ADDRESS=localhost:9000
 CRIU_APP_OUTPUT=app.log
 
-cd $APP_DIR
-if [ "$HANDLER_TYPE" == "criu" ];
-then
+dump_criu_app() {
+	cd $APP_DIR
+	
 	echo "Building $APP_DIR App Classes"
 	javac *.java
 	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"/usr/lib/jvm/java-8-oracle/include/" -I"/usr/lib/jvm/java-8-oracle/include/linux/" GC.c -o libgc.so
@@ -32,12 +32,22 @@ then
 	curl http://$HTTP_SERVER_ADDRESS/gc
 
 	echo "Dumping $APP_DIR App"
+	ls /proc/ | grep [0-9]
 	criu dump -t $(ps aux | grep "java -Djvmtilib" | awk 'NR==1{print $2}') -vvv -o dump.log && echo OK
-else
+
+	cd -
+}
+
+if [ "$HANDLER_TYPE" != "criu" ];
+then
+	cd $APP_DIR
+
 	echo "Building $APP_DIR App to Jar [$JAR_PATH]"
 	mvn install
+
+	cd -
 fi
-cd -
+
 
 echo "Building experiment"
 EXP_APP_NAME="execute-requests"
@@ -66,9 +76,23 @@ do
 	then
 		if [ "$HANDLER_TYPE" == "criu" ];
 		then
+			dump_criu_app
+
+			sleep 1
+
+			echo "Criu HTTP Server Handler"
+			ls /proc/ | grep [0-9]
 			scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $APP_DIR $HANDLER_TYPE $APP_DIR/$CRIU_APP_OUTPUT >> $RESULTS_FILENAME
+			
+			PROCESS_PID=$(ps aux | grep "java -Djvmtilib" | awk 'NR==1{print $2}')
+			echo "Handler PID: [$PROCESS_PID]"
+			kill $PROCESS_PID
+			
+			sleep 1
+
 			truncate --size=0 $APP_DIR/$CRIU_APP_OUTPUT
 		else
+			echo "HTTP Server Handler"
 			scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE >> $RESULTS_FILENAME
 		fi
 	elif [ "$TYPE_DIR" == "std-server-handler" ]

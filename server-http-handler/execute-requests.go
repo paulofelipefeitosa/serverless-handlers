@@ -82,15 +82,16 @@ func main() {
 		fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, i, serviceTime[i - 1])
 	}
 
-	fmt.Fprintln(os.Stderr, fmt.Sprintf("End of execution: %s", executionID))
-
 	serverSTDOUT.Close()
 
+	fmt.Fprintln(os.Stderr, fmt.Sprintf("Killing Process: %d\n", upServerCmd.Process.Pid))
 	// Kill Http server process
 	if err := upServerCmd.Process.Kill(); err != nil {
 		log.Fatal("failed to kill process: ", err)
 	}
+	fmt.Fprintln(os.Stderr, fmt.Sprintf("Waiting...\n"))
 	upServerCmd.Process.Wait()
+	fmt.Fprintln(os.Stderr, fmt.Sprintf("End of execution: %s\n", executionID))
 }
 
 func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverSTDOUT io.ReadCloser) ([]int64, []int64) {
