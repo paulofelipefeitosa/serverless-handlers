@@ -4,6 +4,7 @@ import ctypes.util
 import errno
 import sys
 import os
+import time
 
 # <sched.h> constants for unshare
 CLONE_NEWNS = 0x00020000
@@ -57,7 +58,8 @@ else:
 
 
 def run_criu():
-	print sys.argv
+	#print sys.argv
+	print "Tstart: %d" % int(time.time() * 1e9)
 	os.execlp('criu', *['criu'] + sys.argv[1:])
 
 
