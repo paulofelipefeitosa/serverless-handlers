@@ -18,7 +18,7 @@ func main() {
 	executionID := os.Args[4]
 	jarPath := os.Args[5]
 	handlerType := os.Args[6]
-	serverLogFile := os.Args[7] 
+	serverLogFile := os.Args[7]
 
 	if err != nil {
 		log.Fatal(err)
@@ -26,16 +26,20 @@ func main() {
 	functionURL := fmt.Sprintf("http://%s%s", serverAddress, endpoint)
 
     var upServerCmd* exec.Cmd
-    var serverStdout io.ReadCloser
+    var serverStdout, criuStdout io.ReadCloser
 	if handlerType == "criu" {
 		fmt.Fprintln(os.Stderr, "Criu Handler Type")
-		upServerCmd = exec.Command("python", "criu-ns", "restore", "-d", "-v3", "-o", "restore.log", ">", "log.out")
+		upServerCmd = exec.Command("python", "criu-ns", "restore", "-d", "-v3", "-o", "restore.log")
 		upServerCmd.Env = os.Environ()
 		
 		currentDir, _ := os.Getwd()
 		upServerCmd.Dir = fmt.Sprintf("%s/%s", currentDir, jarPath)
-
 		fmt.Fprintf(os.Stderr, "Dir [%s]\n", upServerCmd.Dir)
+		
+		criuStdout, err = upServerCmd.StdoutPipe()
+		if err != nil {
+		    log.Fatal(err)
+		}
 		
 		serverStdout, err = os.Open(serverLogFile)
 	} else {
@@ -61,11 +65,6 @@ func main() {
 	fmt.Fprintln(os.Stderr, "Got Ready Time")
 
 	if handlerType == "criu" {
-		criuStdout, err := os.Open(fmt.Sprintf("%s/%s", upServerCmd.Dir, "log.out"))
-		if err != nil {
-			log.Fatal(err)
-		}
-
 		fmt.Fprintf(os.Stderr, "Reading Criu-NS Output: %d\n", startHTTPServerTS)
 		fmt.Fscanf(criuStdout, "%d", &startHTTPServerTS)
 		fmt.Fprintf(os.Stderr, "Timestamp red from Criu-NS Output: %d\n", startHTTPServerTS)

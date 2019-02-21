@@ -58,11 +58,14 @@ else:
 
 
 def run_criu():
-	#print sys.argv
 	os.execlp('criu', *['criu'] + sys.argv[1:])
 
 
 def wrap_restore():
+	prerun_criu_ts = time.time()
+	sys.stdout.write('%d\n' % int(prerun_criu_ts * 10**9))
+	sys.stdout.flush()
+	
 	# Unshare pid and mount namespaces
 	if _unshare(CLONE_NEWNS | CLONE_NEWPID) != 0:
 		_errno = ctypes.get_errno()
@@ -101,7 +104,8 @@ def wrap_restore():
 				break
 
 		os.write(w_pipe, "%d\n" % status)
-		os.write(w_pipe, "%d" % int(run_criu_ts * 10**9))
+		#os.write(w_pipe, "%d\n" % int(run_criu_ts * 10**9))
+		#os.write(w_pipe, "%d" % int(prerun_criu_ts * 10**9))
 
 		os.close(w_pipe)
 
@@ -120,7 +124,10 @@ def wrap_restore():
 	os.close(w_pipe)
 	f_r_pipe = os.fdopen(r_pipe)
 	status = f_r_pipe.readline()#os.read(r_pipe, 1024)
-	print f_r_pipe.readline()
+	#sys.stdout.write(f_r_pipe.readline())
+	#sys.stdout.write(f_r_pipe.readline())
+	f_r_pipe.close()
+	
 	if not status.isdigit():
 		status_i = -252
 	else:
