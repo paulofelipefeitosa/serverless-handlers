@@ -22,7 +22,7 @@ dump_criu_app() {
 	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"/usr/lib/jvm/java-8-oracle/include/" -I"/usr/lib/jvm/java-8-oracle/include/linux/" GC.c -o libgc.so
 
 	set +e
-	killall java
+	killall -v java
 	set -e
 	
 	echo "Running $APP_DIR App"
@@ -90,9 +90,8 @@ do
 			echo "Criu HTTP Server Handler"
 			scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $APP_DIR $HANDLER_TYPE $APP_DIR/$CRIU_APP_OUTPUT >> $RESULTS_FILENAME
 
-			PROCESS_PID=$(ps aux | grep "java -Djvmtilib" | awk 'NR==2{print $2}')
-			echo "Handler PID: [$PROCESS_PID]"
-			killall java
+			pgrep java
+			killall -v java
 			
 			truncate --size=0 $APP_DIR/$CRIU_APP_OUTPUT
 		else

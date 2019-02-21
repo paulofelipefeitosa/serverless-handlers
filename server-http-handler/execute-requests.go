@@ -68,6 +68,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Reading Criu-NS Output: %d\n", startHTTPServerTS)
 		fmt.Fscanf(criuStdout, "%d", &startHTTPServerTS)
 		fmt.Fprintf(os.Stderr, "Timestamp red from Criu-NS Output: %d\n", startHTTPServerTS)
+		criuStdout.Close()
 	}
 
 	if err != nil {
