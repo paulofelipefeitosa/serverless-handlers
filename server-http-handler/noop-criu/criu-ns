@@ -59,7 +59,6 @@ else:
 
 def run_criu():
 	#print sys.argv
-	print "Tstart: %d" % int(time.time() * 1e9)
 	os.execlp('criu', *['criu'] + sys.argv[1:])
 
 
@@ -85,6 +84,7 @@ def wrap_restore():
 			raise OSError(_errno, errno.errorcode[_errno])
 
 		# Spawn CRIU binary
+		run_criu_ts = time.time()
 		criu_pid = os.fork()
 		if criu_pid == 0:
 			run_criu()
@@ -100,7 +100,9 @@ def wrap_restore():
 				status = -251
 				break
 
-		os.write(w_pipe, "%d" % status)
+		os.write(w_pipe, "%d\n" % status)
+		os.write(w_pipe, "%d" % int(run_criu_ts * 10**9))
+
 		os.close(w_pipe)
 
 		if status != 0:
@@ -116,7 +118,9 @@ def wrap_restore():
 
 	# Wait for CRIU to exit and report the status back
 	os.close(w_pipe)
-	status = os.read(r_pipe, 1024)
+	f_r_pipe = os.fdopen(r_pipe)
+	status = f_r_pipe.readline()#os.read(r_pipe, 1024)
+	print f_r_pipe.readline()
 	if not status.isdigit():
 		status_i = -252
 	else:
