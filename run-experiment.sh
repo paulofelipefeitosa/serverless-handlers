@@ -21,6 +21,10 @@ dump_criu_app() {
 	javac *.java
 	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"/usr/lib/jvm/java-8-oracle/include/" -I"/usr/lib/jvm/java-8-oracle/include/linux/" GC.c -o libgc.so
 
+	set +e
+	killall java
+	set -e
+	
 	echo "Running $APP_DIR App"
 	echo "" > $CRIU_APP_OUTPUT
 	setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App  < /dev/null &> $CRIU_APP_OUTPUT &
