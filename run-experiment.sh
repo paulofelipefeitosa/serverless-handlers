@@ -87,8 +87,6 @@ do
 		then
 			dump_criu_app
 
-			sleep 1
-
 			echo "Criu HTTP Server Handler"
 			scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $APP_DIR $HANDLER_TYPE $APP_DIR/$CRIU_APP_OUTPUT >> $RESULTS_FILENAME
 
@@ -96,8 +94,6 @@ do
 			echo "Handler PID: [$PROCESS_PID]"
 			killall java
 			
-			sleep 1
-
 			truncate --size=0 $APP_DIR/$CRIU_APP_OUTPUT
 		else
 			echo "HTTP Server Handler"
