@@ -20,7 +20,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
 		return -1;
 		
 	}
-	return JNI_VERSION_10;
+	return JNI_VERSION_1_8;
 }
 
 JNIEXPORT void JNICALL Java_GC_force(JNIEnv *env, jclass js) {
