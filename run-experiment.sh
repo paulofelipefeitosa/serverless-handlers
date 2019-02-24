@@ -99,7 +99,11 @@ do
 			truncate --size=0 $APP_DIR/$CRIU_APP_OUTPUT
 		else
 			echo "HTTP Server Handler"
-			scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE >> $RESULTS_FILENAME
+
+			echo "Droping buff/cache memory"
+			sync; echo 3 > /proc/sys/vm/drop_caches
+
+			scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE "no-path" >> $RESULTS_FILENAME
 		fi
 	elif [ "$TYPE_DIR" == "std-server-handler" ]
 	then
