@@ -26,20 +26,21 @@ func main() {
 	functionURL := fmt.Sprintf("http://%s%s", serverAddress, endpoint)
 
     var upServerCmd* exec.Cmd
-    var serverStdout, criuStdout io.ReadCloser
+    var serverStdout io.ReadCloser
 	if handlerType == "criu" {
 		fmt.Fprintln(os.Stderr, "Criu Handler Type")
-		upServerCmd = exec.Command("python", "criu-ns", "restore", "-d", "-v3", "-o", "restore.log")
+		//upServerCmd = exec.Command("python", "criu-ns", "restore", "-d", "-v3", "-o", "restore.log")
+		upServerCmd = exec.Command("criu", "restore", "-d", "-v3", "-o", "restore.log")
 		upServerCmd.Env = os.Environ()
 		
 		currentDir, _ := os.Getwd()
 		upServerCmd.Dir = fmt.Sprintf("%s/%s", currentDir, jarPath)
 		fmt.Fprintf(os.Stderr, "Dir [%s]\n", upServerCmd.Dir)
 		
-		criuStdout, err = upServerCmd.StdoutPipe()
+		/*criuStdout, err = upServerCmd.StdoutPipe()
 		if err != nil {
 		    log.Fatal(err)
-		}
+		}*/
 		
 		serverStdout, err = os.Open(serverLogFile)
 	} else {
@@ -64,12 +65,13 @@ func main() {
 	httpServerReadyTS, httpServerServiceTS, err := getHTTPServerReadyAndServiceTS(functionURL, serverStdout)
 	fmt.Fprintln(os.Stderr, "Got Ready Time")
 
+	/*
 	if handlerType == "criu" {
 		fmt.Fprintf(os.Stderr, "Reading Criu-NS Output: %d\n", startHTTPServerTS)
 		fmt.Fscanf(criuStdout, "%d", &startHTTPServerTS)
 		fmt.Fprintf(os.Stderr, "Timestamp red from Criu-NS Output: %d\n", startHTTPServerTS)
 		criuStdout.Close()
-	}
+	}*/
 
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Max tries reached")
@@ -110,6 +112,8 @@ func main() {
 	upServerCmd.Process.Wait()
 
 	fmt.Fprintln(os.Stderr, fmt.Sprintf("End of execution: %s\n", executionID))
+
+	os.Exit(0)
 }
 
 func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverStdout io.ReadCloser) ([]int64, []int64) {
@@ -132,7 +136,7 @@ func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverStdou
 }
 
 func getHTTPServerReadyAndServiceTS(functionURL string, serverStdout io.ReadCloser) (int64, int64, error) {
-	maxFailsToStart := int64(20000)
+	maxFailsToStart := int64(2000)
 	var failCount, httpServerReadyTS, endServiceTS int64
 	for {
 		resp, err := http.Get(functionURL)
