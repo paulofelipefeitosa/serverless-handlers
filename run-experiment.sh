@@ -27,7 +27,7 @@ dump_criu_app() {
 	
 	echo "Running $APP_DIR App"
 	echo "" > $CRIU_APP_OUTPUT
-	setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App  < /dev/null &> $CRIU_APP_OUTPUT &
+	scale=0.1 image_path=$IMAGE_PATH setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App  < /dev/null &> $CRIU_APP_OUTPUT &
 
 	echo "Warming $APP_DIR App"
 	while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://$HTTP_SERVER_ADDRESS/ping)" != "200" ]]; 
