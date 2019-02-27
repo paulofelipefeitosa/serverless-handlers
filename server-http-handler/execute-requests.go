@@ -29,18 +29,12 @@ func main() {
     var serverStdout io.ReadCloser
 	if handlerType == "criu" {
 		fmt.Fprintln(os.Stderr, "Criu Handler Type")
-		//upServerCmd = exec.Command("python", "criu-ns", "restore", "-d", "-v3", "-o", "restore.log")
 		upServerCmd = exec.Command("criu", "restore", "-d", "-v3", "-o", "restore.log")
 		upServerCmd.Env = os.Environ()
 		
 		currentDir, _ := os.Getwd()
 		upServerCmd.Dir = fmt.Sprintf("%s/%s", currentDir, jarPath)
 		fmt.Fprintf(os.Stderr, "Dir [%s]\n", upServerCmd.Dir)
-		
-		/*criuStdout, err = upServerCmd.StdoutPipe()
-		if err != nil {
-		    log.Fatal(err)
-		}*/
 		
 		serverStdout, err = os.Open(serverLogFile)
 	} else {
@@ -64,14 +58,6 @@ func main() {
 
 	httpServerReadyTS, httpServerServiceTS, err := getHTTPServerReadyAndServiceTS(functionURL, serverStdout)
 	fmt.Fprintln(os.Stderr, "Got Ready Time")
-
-	/*
-	if handlerType == "criu" {
-		fmt.Fprintf(os.Stderr, "Reading Criu-NS Output: %d\n", startHTTPServerTS)
-		fmt.Fscanf(criuStdout, "%d", &startHTTPServerTS)
-		fmt.Fprintf(os.Stderr, "Timestamp red from Criu-NS Output: %d\n", startHTTPServerTS)
-		criuStdout.Close()
-	}*/
 
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Max tries reached")

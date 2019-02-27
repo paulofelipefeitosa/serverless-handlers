@@ -118,6 +118,7 @@ do
 			set -e
 		else
 			echo "Could not identify the experiment type [$TYPE_DIR]"
+			exit -1
 		fi
 	done
 done
