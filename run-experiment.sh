@@ -81,29 +81,44 @@ echo "Metric,ExecID,ReqID,Value" > $RESULTS_FILENAME
 for i in $(seq "$REP_EXEC")
 do
 	echo "REP_EXEC $i..."
-	if [ "$TYPE_DIR" == "server-http-handler" ];
-	then
-		if [ "$HANDLER_TYPE" == "criu" ];
+	EXECUTION_SUCCESS=-1
+	while [ $EXECUTION_SUCCESS -ne 0 ];
+	do
+		if [ "$TYPE_DIR" == "server-http-handler" ];
 		then
-			echo "HTTP Server CRIU Handler"
-			dump_criu_app
+			if [ "$HANDLER_TYPE" == "criu" ];
+			then
+				echo "HTTP Server CRIU Handler"
+				dump_criu_app
 
-			scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $APP_DIR $HANDLER_TYPE $APP_DIR/$CRIU_APP_OUTPUT >> $RESULTS_FILENAME
+				set +e
+				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $APP_DIR $HANDLER_TYPE $APP_DIR/$CRIU_APP_OUTPUT >> $RESULTS_FILENAME
+				EXECUTION_SUCCESS=$?
 
-			pgrep java
-			killall -v java
+				echo "Try to kill HTTP Server Handler process"
+				pgrep java
+				killall -v java
+				set -e
 
-			truncate --size=0 $APP_DIR/$CRIU_APP_OUTPUT
+				truncate --size=0 $APP_DIR/$CRIU_APP_OUTPUT
+			else
+				echo "HTTP Server Handler"
+
+				set +e
+				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE "no-path" >> $RESULTS_FILENAME
+				EXECUTION_SUCCESS=$?
+				set -e
+			fi
+		elif [ "$TYPE_DIR" == "std-server-handler" ]
+		then
+			echo "STD Handler of Type [$HANDLER_TYPE]"
+			set +e
+			scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $REP_REQ $JAR_PATH $i $HANDLER_TYPE >> $RESULTS_FILENAME
+			EXECUTION_SUCCESS=$?
+			set -e
 		else
-			echo "HTTP Server Handler"
-
-			scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE "no-path" >> $RESULTS_FILENAME
+			echo "Could not identify the experiment type [$TYPE_DIR]"
+			exit -1
 		fi
-	elif [ "$TYPE_DIR" == "std-server-handler" ]
-	then
-		echo "STD Handler of Type [$HANDLER_TYPE]"
-		scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $REP_REQ $JAR_PATH $i $HANDLER_TYPE >> $RESULTS_FILENAME
-	else
-		echo "Could not identify the experiment type [$TYPE_DIR]"
-	fi
+	done
 done
