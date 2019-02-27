@@ -16,7 +16,10 @@ CRIU_APP_OUTPUT=app.log
 
 dump_criu_app() {
 	cd $APP_DIR
-	
+
+	echo "Remove any previous dump files"
+	rm *.img
+
 	echo "Building $APP_DIR App Classes"
 	javac *.java
 	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"/usr/lib/jvm/java-8-oracle/include/" -I"/usr/lib/jvm/java-8-oracle/include/linux/" GC.c -o libgc.so
