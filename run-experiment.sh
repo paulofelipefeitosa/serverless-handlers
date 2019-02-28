@@ -16,7 +16,10 @@ CRIU_APP_OUTPUT=app.log
 
 dump_criu_app() {
 	cd $APP_DIR
-	
+
+	echo "Remove any previous dump files"
+	rm *.img
+
 	echo "Building $APP_DIR App Classes"
 	javac *.java
 	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"/usr/lib/jvm/java-8-oracle/include/" -I"/usr/lib/jvm/java-8-oracle/include/linux/" GC.c -o libgc.so
@@ -27,7 +30,7 @@ dump_criu_app() {
 	
 	echo "Running $APP_DIR App"
 	echo "" > $CRIU_APP_OUTPUT
-	setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App  < /dev/null &> $CRIU_APP_OUTPUT &
+	scale=0.1 image_path=$IMAGE_PATH setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App  < /dev/null &> $CRIU_APP_OUTPUT &
 
 	echo "Warming $APP_DIR App"
 	while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://$HTTP_SERVER_ADDRESS/ping)" != "200" ]]; 
@@ -64,9 +67,11 @@ source /etc/profile
 go build $TYPE_DIR/"$EXP_APP_NAME".go
 
 echo "Downloading image from [$IMAGE_URL]"
+cd $APP_DIR
 IMAGE_NAME=$(basename $IMAGE_URL)
 wget -O $IMAGE_NAME $IMAGE_URL
 IMAGE_PATH=$(pwd)/$IMAGE_NAME
+cd -
 
 echo "Starting experiment"
 
