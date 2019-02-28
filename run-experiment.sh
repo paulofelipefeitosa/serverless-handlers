@@ -70,7 +70,7 @@ echo "Downloading image from [$IMAGE_URL]"
 cd $APP_DIR
 IMAGE_NAME=$(basename $IMAGE_URL)
 wget -O $IMAGE_NAME $IMAGE_URL
-IMAGE_PATH=$(pwd)/$APP_DIR/$IMAGE_NAME
+IMAGE_PATH=$(pwd)/$IMAGE_NAME
 cd -
 
 echo "Starting experiment"
