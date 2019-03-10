@@ -4,13 +4,11 @@ import com.sun.net.httpserver.HttpServer;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.management.ManagementFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import com.sun.net.httpserver.Headers;
 
@@ -26,7 +24,7 @@ public class App {
         InvokeHandler invokeHandler = new InvokeHandler(handler);
 
         server.createContext("/", invokeHandler);
-        server.createContext("/ping").setHandler(App::handlePing);
+        //server.createContext("/ping").setHandler(App::handlePing);
         server.createContext("/gc").setHandler(App::handleGC);
         server.setExecutor(Executors.newSingleThreadExecutor());
         server.start();
@@ -41,6 +39,7 @@ public class App {
         }
     }
 
+    /*
     private static void handlePing(HttpExchange exchange) throws IOException {
         try {
             exchange.sendResponseHeaders(200, 0);
@@ -48,6 +47,7 @@ public class App {
             exchange.close();
         }
     }
+    */
 
     static class InvokeHandler implements HttpHandler {
         IHandler handler;
