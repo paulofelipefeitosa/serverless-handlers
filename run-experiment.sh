@@ -35,13 +35,13 @@ dump_criu_app() {
 	scale=0.1 image_path=$IMAGE_PATH setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App  < /dev/null &> $CRIU_APP_OUTPUT &
 
 	echo "Warming $APP_DIR App"
-	while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://$HTTP_SERVER_ADDRESS/gc)" != "200" ]]; 
-	    do sleep 5;
+	while [[ "$(curl --header 'X-Warm-Request: true' -s -o /dev/null -w ''%{http_code}'' http://$HTTP_SERVER_ADDRESS/ping)" != "200" ]]; 
+	    do sleep 1;
 	done
-	#curl http://$HTTP_SERVER_ADDRESS/gc
+	curl http://$HTTP_SERVER_ADDRESS/gc
 
 	echo "Dumping $APP_DIR App"
-	criu dump -t $(ps aux | grep "java -Djvmtilib" | awk 'NR==1{print $2}') -vvv -o dump.log
+	criu dump --ext-unix-sk -t $(ps aux | grep "java -Djvmtilib" | awk 'NR==1{print $2}') -vvv -o dump.log
 	DUMP_EXIT_STATUS=$?
 	if [ $DUMP_EXIT_STATUS -ne 0 ];
 	then
