@@ -24,15 +24,24 @@ dump_criu_app() {
 
 	echo "Building $APP_DIR App Classes"
 	javac *.java
-	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"/usr/lib/jvm/java-8-oracle/include/" -I"/usr/lib/jvm/java-8-oracle/include/linux/" GC.c -o libgc.so
+	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"/usr/lib/jvm/java-8-openjdk-amd64/include/" -I"/usr/lib/jvm/java-8-openjdk-amd64/include/linux/" GC.c -o libgc.so
 
 	set +e
 	killall -v java
+	sleep 3
 	set -e
 	
 	echo "Running $APP_DIR App"
 	echo "" > $CRIU_APP_OUTPUT
-	scale=0.1 image_path=$IMAGE_PATH setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App  < /dev/null &> $CRIU_APP_OUTPUT &
+	set +e
+	pgrep java
+	scale=0.1 image_path=$IMAGE_PATH java -Djvmtilib=${PWD}/libgc.so -classpath . App  < /dev/null &> $CRIU_APP_OUTPUT &
+	echo "$?"
+	set -e
+	
+	pgrep java
+	APP_PID=$(pgrep java)
+	echo "App PID [$APP_PID]"
 
 	echo "Warming $APP_DIR App"
 	while [[ "$(curl --header 'X-Warm-Request: true' -s -o /dev/null -w ''%{http_code}'' http://$HTTP_SERVER_ADDRESS/ping)" != "200" ]]; 
@@ -40,8 +49,10 @@ dump_criu_app() {
 	done
 	curl http://$HTTP_SERVER_ADDRESS/gc
 
+	ps aux | grep java
+
 	echo "Dumping $APP_DIR App"
-	criu dump --ext-unix-sk -t $(ps aux | grep "java -Djvmtilib" | awk 'NR==1{print $2}') -vvv -o dump.log
+	criu dump -t $APP_PID -vvv -o dump.log
 	DUMP_EXIT_STATUS=$?
 	if [ $DUMP_EXIT_STATUS -ne 0 ];
 	then

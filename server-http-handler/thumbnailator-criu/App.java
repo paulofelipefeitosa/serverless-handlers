@@ -1,19 +1,21 @@
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpPrincipal;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import com.sun.net.httpserver.Headers;
+import com.sun.net.httpserver.HttpContext;
 
 public class App {
-
-    private static InvokeHandler invokeHandler;
 
     public static void main(String[] args) throws Exception {
         int port = 9000;
@@ -22,13 +24,110 @@ public class App {
 
         InetSocketAddress addr = new InetSocketAddress(port);
         HttpServer server = HttpServer.create(addr, 0);
-        invokeHandler = new InvokeHandler(handler);
+        InvokeHandler invokeHandler = new InvokeHandler(handler);
 
         server.createContext("/", invokeHandler);
         server.createContext("/ping").setHandler(App::handlePing);
         server.createContext("/gc").setHandler(App::handleGC);
         server.setExecutor(Executors.newSingleThreadExecutor());
         server.start();
+
+/*
+        invokeHandler.handle(new HttpExchange() {
+
+            @Override
+            public void setStreams(InputStream arg0, OutputStream arg1) {}
+
+            @Override
+            public void setAttribute(String arg0, Object arg1) {}
+
+            @Override
+            public void sendResponseHeaders(int arg0, long arg1) throws IOException {}
+
+            @Override
+            public Headers getResponseHeaders() {
+                return new Headers();
+            }
+
+            @Override
+            public int getResponseCode() {
+                return 200;
+            }
+
+            @Override
+            public OutputStream getResponseBody() {
+                return new OutputStream() {
+
+                    @Override
+                    public void write(int b) throws IOException {}
+                };
+            }
+
+            @Override
+            public URI getRequestURI() {
+                try {
+                    return new URI("http://localhost:9000/");
+                } catch (URISyntaxException e) {
+                    return null;
+                }
+            }
+
+            @Override
+            public String getRequestMethod() {
+                return "GET";
+            }
+
+            @Override
+            public Headers getRequestHeaders() {
+                return new Headers();
+            }
+
+            @Override
+            public InputStream getRequestBody() {
+                return new InputStream() {
+
+                    @Override
+                    public int read() throws IOException {
+                        return -1;
+                    }
+                };
+            }
+
+            @Override
+            public InetSocketAddress getRemoteAddress() {
+                return null;
+            }
+
+            @Override
+            public String getProtocol() {
+                return "http";
+            }
+
+            @Override
+            public HttpPrincipal getPrincipal() {
+                return null;
+            }
+
+            @Override
+            public InetSocketAddress getLocalAddress() {
+                return null;
+            }
+
+            @Override
+            public HttpContext getHttpContext() {
+                return null;
+            }
+
+            @Override
+            public Object getAttribute(String arg0) {
+                return null;
+            }
+
+            @Override
+            public void close() {}
+
+        });
+        */
     }
 
     private static void handleGC(HttpExchange exchange) throws IOException {
@@ -40,12 +139,10 @@ public class App {
         }
     }
 
-
     private static void handlePing(HttpExchange exchange) throws IOException {
         try {
-            invokeHandler.handle(exchange);
-        } finally {
             exchange.sendResponseHeaders(200, 0);
+        } finally {
             exchange.close();
         }
     }
@@ -107,6 +204,8 @@ public class App {
             OutputStream os = t.getResponseBody();
             os.write(bytesOut);
             os.close();
+            
+            t.close();
         }
     }
 
