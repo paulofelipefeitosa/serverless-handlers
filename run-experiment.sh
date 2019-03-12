@@ -35,7 +35,7 @@ dump_criu_app() {
 	echo "" > $CRIU_APP_OUTPUT
 	set +e
 	pgrep java
-	scale=0.1 image_path=$IMAGE_PATH java -Djvmtilib=${PWD}/libgc.so -classpath . App  < /dev/null &> $CRIU_APP_OUTPUT &
+	scale=0.1 image_path=$IMAGE_PATH setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App  < /dev/null &> $CRIU_APP_OUTPUT &
 	echo "$?"
 	set -e
 	
