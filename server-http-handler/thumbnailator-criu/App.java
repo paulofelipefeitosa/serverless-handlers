@@ -1,4 +1,3 @@
-import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpPrincipal;
 import com.sun.net.httpserver.HttpServer;
@@ -14,6 +13,7 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpContext;
+import com.sun.net.httpserver.HttpExchange;
 
 public class App {
 
@@ -32,37 +32,30 @@ public class App {
         server.setExecutor(Executors.newSingleThreadExecutor());
         server.start();
 
-/*
         invokeHandler.handle(new HttpExchange() {
-
+            private Headers headers = new Headers();
+            
             @Override
             public void setStreams(InputStream arg0, OutputStream arg1) {}
-
             @Override
             public void setAttribute(String arg0, Object arg1) {}
-
             @Override
             public void sendResponseHeaders(int arg0, long arg1) throws IOException {}
-
             @Override
             public Headers getResponseHeaders() {
                 return new Headers();
             }
-
             @Override
             public int getResponseCode() {
                 return 200;
             }
-
             @Override
             public OutputStream getResponseBody() {
                 return new OutputStream() {
-
                     @Override
                     public void write(int b) throws IOException {}
                 };
             }
-
             @Override
             public URI getRequestURI() {
                 try {
@@ -71,62 +64,56 @@ public class App {
                     return null;
                 }
             }
-
             @Override
             public String getRequestMethod() {
                 return "GET";
             }
-
             @Override
             public Headers getRequestHeaders() {
-                return new Headers();
+                headers.add(Handler.WARM_REQUEST_HEADER_KEY, "true");
+                return headers;
             }
-
             @Override
             public InputStream getRequestBody() {
                 return new InputStream() {
-
                     @Override
                     public int read() throws IOException {
                         return -1;
                     }
                 };
             }
-
             @Override
             public InetSocketAddress getRemoteAddress() {
                 return null;
             }
-
             @Override
             public String getProtocol() {
                 return "http";
             }
-
             @Override
             public HttpPrincipal getPrincipal() {
                 return null;
             }
-
             @Override
             public InetSocketAddress getLocalAddress() {
                 return null;
             }
-
             @Override
             public HttpContext getHttpContext() {
                 return null;
             }
-
             @Override
             public Object getAttribute(String arg0) {
                 return null;
             }
-
             @Override
             public void close() {}
-
         });
+        
+        /*
+        Map<String, String> reqHeaders = new HashMap<String, String>();
+        reqHeaders.put();
+        handler.Handle(new Request("", reqHeaders, "", ""));
         */
     }
 
@@ -167,6 +154,7 @@ public class App {
                 while ((length = inputStream.read(buffer)) != -1) {
                     result.write(buffer, 0, length);
                 }
+                inputStream.close();
                 // StandardCharsets.UTF_8.name() > JDK 7
                 requestBody = result.toString("UTF-8");
             }
@@ -204,7 +192,7 @@ public class App {
             OutputStream os = t.getResponseBody();
             os.write(bytesOut);
             os.close();
-            
+
             t.close();
         }
     }

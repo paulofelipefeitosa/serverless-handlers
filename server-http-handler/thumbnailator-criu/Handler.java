@@ -7,9 +7,11 @@ import java.io.File;
 import javax.imageio.ImageIO;
 
 public class Handler implements IHandler {
+    
+    public static final String WARM_REQUEST_HEADER_KEY = "X-warm-request"; 
 
     public IResponse Handle(IRequest req) {
-        boolean isWarmRequest = req.getHeaders().containsKey("X-warm-request");
+        boolean isWarmRequest = req.getHeaders().containsKey(WARM_REQUEST_HEADER_KEY);
         if (!isWarmRequest) {
             System.out.println("T4: " + System.currentTimeMillis());
         }
@@ -24,7 +26,10 @@ public class Handler implements IHandler {
         long timeBeforeMarkSweep = markSweep.getCollectionTime();
         long before = System.currentTimeMillis();
 
-        String err = callFunction();
+        String err = "";
+        if(!isWarmRequest) {
+            err = callFunction();
+        }
 
         long after = System.currentTimeMillis();
         long countAfterScavenge = scavenge.getCollectionCount();
