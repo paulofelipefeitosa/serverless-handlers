@@ -109,12 +109,6 @@ public class App {
             @Override
             public void close() {}
         });
-        
-        /*
-        Map<String, String> reqHeaders = new HashMap<String, String>();
-        reqHeaders.put();
-        handler.Handle(new Request("", reqHeaders, "", ""));
-        */
     }
 
     private static void handleGC(HttpExchange exchange) throws IOException {
