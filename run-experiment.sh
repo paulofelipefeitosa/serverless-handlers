@@ -3,10 +3,11 @@ set -e
 TYPE_DIR=$1 # server-http-handler or std-server-handler
 APP_NAME=$2 # APP DIR NAME
 JAR_NAME=$3 # JAR NAME
-IMAGE_URL=$4
-REP_EXEC=$5
-REP_REQ=$6
-HANDLER_TYPE=$7
+IMAGE_URL=$4 # URL to download image
+REP_EXEC=$5 # integer value
+REP_REQ=$6 # integer value
+HANDLER_TYPE=$7 # criu or no-criu
+PATH2JVM_INCLUDES=$8 # /usr/lib/jvm/java-8-oracle
 
 APP_DIR=$TYPE_DIR/$APP_NAME
 JAR_PATH=$APP_DIR/target/$JAR_NAME
@@ -24,7 +25,7 @@ dump_criu_app() {
 
 	echo "Building $APP_DIR App Classes"
 	javac *.java
-	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"/usr/lib/jvm/java-8-oracle/include/" -I"/usr/lib/jvm/java-8-oracle/include/linux/" GC.c -o libgc.so
+	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"$PATH2JVM_INCLUDES/include/" -I"$PATH2JVM_INCLUDES/include/linux/" GC.c -o libgc.so
 
 	set +e
 	killall -v java
