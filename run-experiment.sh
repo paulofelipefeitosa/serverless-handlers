@@ -31,21 +31,21 @@ dump_criu_app() {
 	killall -v java
 	sleep 1
 	set -e
-	
+
 	echo "Running $APP_DIR App"
 	echo "" > $CRIU_APP_OUTPUT
 	scale=0.1 image_path=$IMAGE_PATH setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App  < /dev/null &> $CRIU_APP_OUTPUT &
-	
+	sleep 1
+
 	APP_PID=$(pgrep java)
 	echo "App PID [$APP_PID]"
+	ps aux | grep java
 
 	echo "Warming $APP_DIR App"
 	while [[ "$(curl --header 'X-Warm-Request: true' -s -o /dev/null -w ''%{http_code}'' http://$HTTP_SERVER_ADDRESS/ping)" != "200" ]]; 
 	    do sleep 1;
 	done
 	curl http://$HTTP_SERVER_ADDRESS/gc
-
-	ps aux | grep java
 
 	echo "Dumping $APP_DIR App"
 	criu dump -t $APP_PID -vvv -o dump.log
