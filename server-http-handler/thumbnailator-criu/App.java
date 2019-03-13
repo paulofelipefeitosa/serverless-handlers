@@ -43,8 +43,8 @@ public class App {
     private static void handlePing(HttpExchange exchange) throws IOException {
         try {
             invokeHandler.handle(exchange);
-            exchange.sendResponseHeaders(200, 0);
         } finally {
+            exchange.sendResponseHeaders(200, 0);
             exchange.close();
         }
     }
