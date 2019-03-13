@@ -1,21 +1,20 @@
-import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
-
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.management.ManagementFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import com.sun.net.httpserver.Headers;
+import com.sun.net.httpserver.HttpExchange;
 
 public class App {
 
+    private static InvokeHandler invokeHandler;
+    
     public static void main(String[] args) throws Exception {
         int port = 9000;
 
@@ -23,7 +22,7 @@ public class App {
 
         InetSocketAddress addr = new InetSocketAddress(port);
         HttpServer server = HttpServer.create(addr, 0);
-        InvokeHandler invokeHandler = new InvokeHandler(handler);
+        invokeHandler = new InvokeHandler(handler);
 
         server.createContext("/", invokeHandler);
         server.createContext("/ping").setHandler(App::handlePing);
@@ -31,7 +30,7 @@ public class App {
         server.setExecutor(Executors.newSingleThreadExecutor());
         server.start();
     }
-    
+
     private static void handleGC(HttpExchange exchange) throws IOException {
         try {
             GC.force();
@@ -43,8 +42,9 @@ public class App {
 
     private static void handlePing(HttpExchange exchange) throws IOException {
         try {
-            exchange.sendResponseHeaders(200, 0);
+            invokeHandler.handle(exchange);
         } finally {
+            exchange.sendResponseHeaders(200, 0);
             exchange.close();
         }
     }
@@ -69,11 +69,11 @@ public class App {
                 while ((length = inputStream.read(buffer)) != -1) {
                     result.write(buffer, 0, length);
                 }
+                inputStream.close();
                 // StandardCharsets.UTF_8.name() > JDK 7
                 requestBody = result.toString("UTF-8");
             }
 
-            // System.out.println(requestBody);
             Headers reqHeaders = t.getRequestHeaders();
             Map<String, String> reqHeadersMap = new HashMap<String, String>();
 
@@ -83,10 +83,6 @@ public class App {
                     reqHeadersMap.put(header.getKey(), headerValues.get(0));
                 }
             }
-
-            // for(Map.Entry<String, String> entry : reqHeadersMap.entrySet()) {
-            // System.out.println("Req header " + entry.getKey() + " " + entry.getValue());
-            // }
 
             IRequest req = new Request(requestBody, reqHeadersMap, t.getRequestURI().getRawQuery(),
                     t.getRequestURI().getPath());
@@ -112,8 +108,7 @@ public class App {
             os.write(bytesOut);
             os.close();
 
-            // System.out.println("Request / " + Integer.toString(bytesOut.length) +" bytes
-            // written.");
+            t.close();
         }
     }
 

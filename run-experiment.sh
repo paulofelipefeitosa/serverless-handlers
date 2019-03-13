@@ -3,10 +3,11 @@ set -e
 TYPE_DIR=$1 # server-http-handler or std-server-handler
 APP_NAME=$2 # APP DIR NAME
 JAR_NAME=$3 # JAR NAME
-IMAGE_URL=$4
-REP_EXEC=$5
-REP_REQ=$6
-HANDLER_TYPE=$7
+IMAGE_URL=$4 # URL to download image
+REP_EXEC=$5 # integer value
+REP_REQ=$6 # integer value
+HANDLER_TYPE=$7 # criu or no-criu
+PATH2JVM_INCLUDES=$8 # /usr/lib/jvm/java-8-oracle
 
 APP_DIR=$TYPE_DIR/$APP_NAME
 JAR_PATH=$APP_DIR/target/$JAR_NAME
@@ -18,28 +19,36 @@ dump_criu_app() {
 	cd $APP_DIR
 
 	echo "Remove any previous dump files"
+	set +e
 	rm *.img
+	set -e
 
 	echo "Building $APP_DIR App Classes"
 	javac *.java
-	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"/usr/lib/jvm/java-8-oracle/include/" -I"/usr/lib/jvm/java-8-oracle/include/linux/" GC.c -o libgc.so
+	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"$PATH2JVM_INCLUDES/include/" -I"$PATH2JVM_INCLUDES/include/linux/" GC.c -o libgc.so
 
 	set +e
 	killall -v java
+	sleep 1
 	set -e
-	
+
 	echo "Running $APP_DIR App"
 	echo "" > $CRIU_APP_OUTPUT
 	scale=0.1 image_path=$IMAGE_PATH setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App  < /dev/null &> $CRIU_APP_OUTPUT &
+	sleep 1
+
+	APP_PID=$(pgrep java)
+	echo "App PID [$APP_PID]"
+	ps aux | grep java
 
 	echo "Warming $APP_DIR App"
-	while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://$HTTP_SERVER_ADDRESS/ping)" != "200" ]]; 
-	    do sleep 5;
+	while [[ "$(curl --header 'X-Warm-Request: true' -s -o /dev/null -w ''%{http_code}'' http://$HTTP_SERVER_ADDRESS/ping)" != "200" ]]; 
+	    do sleep 1;
 	done
 	curl http://$HTTP_SERVER_ADDRESS/gc
 
 	echo "Dumping $APP_DIR App"
-	criu dump -t $(ps aux | grep "java -Djvmtilib" | awk 'NR==1{print $2}') -vvv -o dump.log
+	criu dump -t $APP_PID -vvv -o dump.log
 	DUMP_EXIT_STATUS=$?
 	if [ $DUMP_EXIT_STATUS -ne 0 ];
 	then

@@ -7,9 +7,15 @@ import java.io.File;
 import javax.imageio.ImageIO;
 
 public class Handler implements IHandler {
+    
+    public static final String WARM_REQUEST_HEADER_KEY = "X-warm-request"; 
 
     public IResponse Handle(IRequest req) {
-        System.out.println("T4: " + System.currentTimeMillis());
+        boolean isWarmRequest = req.getHeaders().containsKey(WARM_REQUEST_HEADER_KEY);
+        if (!isWarmRequest) {
+            System.out.println("T4: " + System.currentTimeMillis());
+        }
+        
         List<GarbageCollectorMXBean> gcs = ManagementFactory.getGarbageCollectorMXBeans();
         GarbageCollectorMXBean scavenge = gcs.get(0);
         GarbageCollectorMXBean markSweep = gcs.get(1);
@@ -20,7 +26,10 @@ public class Handler implements IHandler {
         long timeBeforeMarkSweep = markSweep.getCollectionTime();
         long before = System.currentTimeMillis();
 
-        String err = callFunction();
+        String err = "";
+        if(!isWarmRequest) {
+            err = callFunction();
+        }
 
         long after = System.currentTimeMillis();
         long countAfterScavenge = scavenge.getCollectionCount();
@@ -43,7 +52,9 @@ public class Handler implements IHandler {
 
         Response res = new Response();
         res.setBody(output);
-        System.out.println("T6: " + System.currentTimeMillis());
+        if (!isWarmRequest) {
+            System.out.println("T6: " + System.currentTimeMillis());
+        }
         return res;
     }
 
@@ -64,13 +75,11 @@ public class Handler implements IHandler {
             Thumbnails.of(image)
                 .scale(scale)
                 .asBufferedImage();
-        	
         } catch (Exception e) {
             err = e.toString() + System.lineSeparator()
             		+ e.getCause() + System.lineSeparator()
             		+ e.getMessage();
             e.printStackTrace();
-           
         } catch (Error e) {
             err = e.toString() + System.lineSeparator()
             		+ e.getCause() + System.lineSeparator()
@@ -80,5 +89,4 @@ public class Handler implements IHandler {
 
         return err;
     }
-
 }
