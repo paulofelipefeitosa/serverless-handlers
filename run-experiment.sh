@@ -28,7 +28,7 @@ dump_criu_app() {
 
 	set +e
 	killall -v java
-	sleep 3
+	sleep 1
 	set -e
 	
 	echo "Running $APP_DIR App"
