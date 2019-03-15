@@ -47,8 +47,6 @@ dump_criu_app() {
 	done
 	curl http://$HTTP_SERVER_ADDRESS/gc
 
-	lsof -p $APP_PID
-
 	echo "Dumping $APP_DIR App"
 	criu dump -t $APP_PID -vvv -o dump.log
 	DUMP_EXIT_STATUS=$?
