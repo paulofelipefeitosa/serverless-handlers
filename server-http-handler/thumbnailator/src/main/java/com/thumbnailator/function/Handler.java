@@ -7,9 +7,11 @@ import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.util.List;
 import java.lang.Error;
-import net.coobird.thumbnailator.Thumbnails;
+import java.awt.geom.AffineTransform;
+import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
 import javax.imageio.ImageIO;
 
 public class Handler implements com.thumbnailator.model.IHandler {
@@ -56,9 +58,9 @@ public class Handler implements com.thumbnailator.model.IHandler {
     static double scale;
     static BufferedImage image;
     static {
-        try{
+        try(FileInputStream imageFile = new FileInputStream(new File(System.getenv("image_path")))){
             scale = Double.parseDouble(System.getenv("scale"));
-            image = ImageIO.read(new File(System.getenv("image_path")));
+            image = ImageIO.read(imageFile);
         } catch(Exception e) {
             System.err.println(e.getMessage());
         }
@@ -67,10 +69,9 @@ public class Handler implements com.thumbnailator.model.IHandler {
     public String callFunction() {
         String err = "";
         try {
-            Thumbnails.of(image)
-                .scale(scale)
-                .asBufferedImage();
-        	
+            AffineTransform transform = AffineTransform.getScaleInstance(scale, scale); 
+            AffineTransformOp op = new AffineTransformOp(transform, AffineTransformOp.TYPE_BILINEAR); 
+            op.filter(image, null).flush();
         } catch (Exception e) {
             err = e.toString() + System.lineSeparator()
             		+ e.getCause() + System.lineSeparator()

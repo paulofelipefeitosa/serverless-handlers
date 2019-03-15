@@ -44,8 +44,6 @@ public class App {
         try {
             invokeHandler.handle(exchange);
         } finally {
-            exchange.sendResponseHeaders(200, 0);
-            exchange.close();
         }
     }
 
