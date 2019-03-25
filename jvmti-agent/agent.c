@@ -194,7 +194,6 @@ static void check_jvmti_errors(jvmtiEnv *jvmti,
 }
 
 JNIEXPORT void JNICALL Java_GC_force(JNIEnv *env, jclass js) {
-    //fprintf(out, "Calling GC\n");
     (*jvmti)->ForceGarbageCollection(jvmti);
 }
 
