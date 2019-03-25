@@ -4,9 +4,7 @@
 #include <time.h>
 #include "jvmti.h"
 
-JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved);
 static void check_jvmti_errors(jvmtiEnv *jvmti, jvmtiError errnum, const char *str);
-void JNICALL VMStart(jvmtiEnv *jvmti_env, JNIEnv* jni_env);
 static void trace(jvmtiEnv *jvmti_env, const char* fmt, ...);
 
 static FILE* out;
