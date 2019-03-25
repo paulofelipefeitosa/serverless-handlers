@@ -37,7 +37,6 @@ static void trace(jvmtiEnv *jvmti_env, const char* fmt, ...) {
 }
 
 static char* fix_class_name(char* class_name) {
-    // Strip 'L' and ';' from class signature
     class_name[strlen(class_name) - 1] = 0;
     return class_name + 1;
 }
