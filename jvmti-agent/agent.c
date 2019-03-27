@@ -158,6 +158,8 @@ void JNICALL MethodEntry(jvmtiEnv *jvmti,
     }
 }
 
+//Add MethodExit
+
 JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, 
             char *options, 
             void *reserved) {
