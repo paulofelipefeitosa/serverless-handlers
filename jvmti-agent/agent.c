@@ -117,9 +117,50 @@ static void setEventNotification(jvmtiEnv* env,
     check_jvmti_errors(env, error, "Unable to set the event notification mode");
 }
 
+void JNICALL VMObjectAlloc(jvmtiEnv *jvmti_env,
+            JNIEnv* jni_env,
+            jthread thread,
+            jobject object,
+            jclass object_klass,
+            jlong size) {
+    char* name;
+    (*jvmti_env)->GetClassSignature(jvmti_env, object_klass, &name, NULL);
+    trace(jvmti_env, "Allocating Object from Class: %s", fix_class_name(name));
+    (*jvmti_env)->Deallocate(jvmti_env, name);
+}
+
+static char checkPattern(char *text, 
+            int l, 
+            char *pattern) {
+    int i, n = strlen(pattern);
+    for(i = 0; i < n && pattern[i] == text[i + l];i++);
+    return i == n;
+}
+
+void JNICALL MethodEntry(jvmtiEnv *jvmti, 
+            JNIEnv *jni, 
+            jthread thread, 
+            jmethodID method) {
+    char *method_name;
+    char *signature_ptr;
+    char *generic_ptr;
+
+    jvmtiError error;
+    error = (*jvmti)->GetMethodName(jvmti, method, &method_name, &signature_ptr, &generic_ptr);
+    check_jvmti_errors(jvmti, error, "Unable to get the method name");
+
+    int size_method_name = strlen(method_name);
+    char pattern[5] = {'m', 'a', 'i', 'n', '\0'};
+    if(size_method_name == 4) {
+        if(checkPattern(method_name, 0, pattern)) {
+            trace(jvmti, "Entered method: [%s :: %s :: %s]", method_name, signature_ptr, generic_ptr);
+        }
+    }
+}
+
 JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, 
-        char *options, 
-        void *reserved) {
+            char *options, 
+            void *reserved) {
     long long start_time = getCurrentTimestamp();
 
     if (options == NULL || !options[0]) {
@@ -148,6 +189,8 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm,
     // Let's initialize the capabilities
     capa.can_generate_all_class_hook_events = 1;
     capa.can_generate_compiled_method_load_events = 1;
+    capa.can_generate_vm_object_alloc_events = 1;
+    capa.can_generate_method_entry_events = 1;
     error = (*jvmti)->AddCapabilities(jvmti, &capa);
     check_jvmti_errors(jvmti, error, "Unable to add the required capabilities");
 
@@ -159,6 +202,8 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm,
     setEventNotification(jvmti, JVMTI_ENABLE, JVMTI_EVENT_CLASS_PREPARE);
     setEventNotification(jvmti, JVMTI_ENABLE, JVMTI_EVENT_DYNAMIC_CODE_GENERATED);
     setEventNotification(jvmti, JVMTI_ENABLE, JVMTI_EVENT_COMPILED_METHOD_LOAD);
+    setEventNotification(jvmti, JVMTI_ENABLE, JVMTI_EVENT_VM_OBJECT_ALLOC);
+    setEventNotification(jvmti, JVMTI_ENABLE, JVMTI_EVENT_METHOD_ENTRY);
 
     // Setup the callbacks
     (void) memset(&callbacks, 0, sizeof(callbacks));
@@ -169,6 +214,8 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm,
     callbacks.ClassPrepare = ClassPrepare;
     callbacks.DynamicCodeGenerated = DynamicCodeGenerated;
     callbacks.CompiledMethodLoad = CompiledMethodLoad;
+    callbacks.VMObjectAlloc = VMObjectAlloc;
+    callbacks.MethodEntry = MethodEntry;
     error = (*jvmti)->SetEventCallbacks(jvmti, &callbacks, (jint) sizeof(callbacks));
     check_jvmti_errors(jvmti, error, "Unable to set event callbacks");
 
@@ -180,8 +227,8 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm,
 }
 
 static void check_jvmti_errors(jvmtiEnv *jvmti, 
-        jvmtiError errnum, 
-        const char *str) {
+            jvmtiError errnum, 
+            const char *str) {
     if (errnum != JVMTI_ERROR_NONE) {
         char *errnum_str;
 
