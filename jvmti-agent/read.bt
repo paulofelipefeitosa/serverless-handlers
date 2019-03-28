@@ -1,0 +1,22 @@
+tracepoint:syscalls:sys_enter_execve 
+{
+  printf("execve: %s: ", str(args->filename));
+  @start[tid] = nsecs;
+}
+
+tracepoint:syscalls:sys_exit_execve / @start[tid] /
+{
+  printf("%d\n", nsecs - @start[tid]);
+  delete(@start[tid]);
+}
+
+tracepoint:syscalls:sys_enter_clone 
+{
+  @start_clone[tid] = nsecs;
+}
+
+tracepoint:syscalls:sys_exit_clone / @start_clone[tid] /
+{
+  printf("clone: %d\n", nsecs - @start_clone[tid]);
+  delete(@start_clone[tid]);
+}
