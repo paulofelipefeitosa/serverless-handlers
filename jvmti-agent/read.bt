@@ -1,3 +1,12 @@
+BEGIN
+{
+	system("date +%s\n", "%s%N");
+	printf("%d\n", nsecs);
+	printf("%ld\n", nsecs);
+	printf("%lld\n", nsecs);
+	printf("%lld\n", nsecs);
+}
+
 tracepoint:syscalls:sys_enter_execve 
 {
   printf("execve: %s: ", str(args->filename));
@@ -6,7 +15,7 @@ tracepoint:syscalls:sys_enter_execve
 
 tracepoint:syscalls:sys_exit_execve / @start[tid] /
 {
-  printf("%d\n", nsecs - @start[tid]);
+  printf("%d -- %lld\n", nsecs - @start[tid], nsecs);
   delete(@start[tid]);
 }
 
