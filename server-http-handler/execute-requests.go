@@ -9,7 +9,16 @@ import(
 	"fmt"
 	"io"
 	"io/ioutil"
+	_ "unsafe" // required to use //go:linkname
 )
+
+//go:noescape
+//go:linkname nanotime runtime.nanotime
+func nanotime() int64
+
+func Now() uint64 {
+	return uint64(nanotime())
+}
 
 func main() {
 	serverAddress := os.Args[1]
@@ -51,7 +60,7 @@ func main() {
 	// Start Http Server
 	fmt.Fprintln(os.Stderr, "Start HTTP Server")
 
-	startHTTPServerTS := time.Now().UTC().UnixNano()
+	startHTTPServerTS := Now()
 	if err := upServerCmd.Start(); err != nil {
 		log.Fatal(err)
 	}
@@ -68,9 +77,6 @@ func main() {
 		}
 		log.Fatal(err)
 	}
-	millis2Nano := int64(1e6)
-	httpServerReadyTS *= millis2Nano
-	httpServerServiceTS *= millis2Nano
 
 	fmt.Fprintf(os.Stderr, "Values for Ready Time %d, %d\n", httpServerReadyTS, httpServerServiceTS)
 
@@ -105,7 +111,6 @@ func main() {
 func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverStdout io.ReadCloser) ([]int64, []int64) {
 	var roundTrip, serviceTime []int64
 	var startServiceTS, endServiceTS int64
-	millis2Nano := int64(1e6)
 	for i := int64(1); i < nRequests; i++ {
 		response, err, sendRequestTS, receiveResponseTS := sendRequest2(functionURL)
 		if err == nil && response.StatusCode == http.StatusOK {
@@ -113,7 +118,7 @@ func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverStdou
 			fmt.Fscanf(serverStdout, "T6: %d", &endServiceTS)
 			
 			roundTrip = append(roundTrip, receiveResponseTS - sendRequestTS)
-			serviceTime = append(serviceTime, (endServiceTS - startServiceTS) * millis2Nano)
+			serviceTime = append(serviceTime, endServiceTS - startServiceTS)
 		} else {
 			log.Fatal(err)
 		}
@@ -147,12 +152,12 @@ func getHTTPServerReadyAndServiceTS(functionURL string, serverStdout io.ReadClos
 }
 
 func sendRequest2(URL string) (*http.Response, error, int64, int64) {
-	sendRequestTS := time.Now()
+	sendRequestTS := Now()
 	response, err := http.Get(URL)
-	receiveResponseTS := time.Now()
+	receiveResponseTS := Now()
 	if err == nil && response.Body != nil {
 		io.Copy(ioutil.Discard, response.Body)
 		response.Body.Close()
 	}
-	return response, err, sendRequestTS.UTC().UnixNano(), receiveResponseTS.UTC().UnixNano()
+	return response, err, sendRequestTS, receiveResponseTS
 }

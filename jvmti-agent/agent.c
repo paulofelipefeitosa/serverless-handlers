@@ -236,11 +236,8 @@ static void check_jvmti_errors(jvmtiEnv *jvmti,
             const char *str) {
     if (errnum != JVMTI_ERROR_NONE) {
         char *errnum_str;
-
         errnum_str = NULL;
-
         (void) (*jvmti)->GetErrorName(jvmti, errnum, &errnum_str);
-
         printf("ERROR: JVMTI: [%d] %s - %s\n", errnum, (errnum_str == NULL ? "Unknown": errnum_str), (str == NULL? "" : str));
     }
 }
