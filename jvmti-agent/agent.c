@@ -8,7 +8,6 @@ static void check_jvmti_errors(jvmtiEnv *jvmti, jvmtiError errnum, const char *s
 static void trace(jvmtiEnv *jvmti_env, const char* fmt, ...);
 
 static jvmtiEnv *jvmti;
-static FILE* out;
 static jrawMonitorID rawMonitorID;
 static struct timespec tms;
 
@@ -32,7 +31,7 @@ static void trace(jvmtiEnv *jvmti_env, const char* fmt, ...) {
     vsprintf(buf, fmt, args);
     va_end(args);
 
-    fprintf(out, "[%lld] %s\n", current_time, buf);
+    printf("[%lld] %s\n", current_time, buf);
 
     (*jvmti_env)->RawMonitorExit(jvmti_env, rawMonitorID);
 }
@@ -168,14 +167,7 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm,
             void *reserved) {
     long long start_time = getCurrentTimestamp();
 
-    if (options == NULL || !options[0]) {
-        out = stderr;
-    } else if ((out = fopen(options, "a")) == NULL) {
-        fprintf(stderr, "Cannot open output file: %s\n", options);
-        return 1;
-    }
-
-    fprintf(out, "[%lld] JVMTI started\n", start_time);
+    printf("[%lld] JVMTI started\n", start_time);
 
     jvmtiError error;
     jint res;
@@ -239,11 +231,5 @@ static void check_jvmti_errors(jvmtiEnv *jvmti,
         errnum_str = NULL;
         (void) (*jvmti)->GetErrorName(jvmti, errnum, &errnum_str);
         printf("ERROR: JVMTI: [%d] %s - %s\n", errnum, (errnum_str == NULL ? "Unknown": errnum_str), (str == NULL? "" : str));
-    }
-}
-
-JNIEXPORT void JNICALL Agent_OnUnload(JavaVM *vm) {
-    if (out != NULL && out != stderr) {
-        fclose(out);
     }
 }
