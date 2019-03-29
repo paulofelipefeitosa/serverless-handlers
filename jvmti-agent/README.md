@@ -1,4 +1,4 @@
-First is necessary to [install](https://github.com/iovisor/bpftrace/blob/master/INSTALL.md) the BPFTrace.
+First, is necessary to [install](https://github.com/iovisor/bpftrace/blob/master/INSTALL.md) the BPFTrace.
 
 Compiling JVMTI Agent.
 ``` sh
