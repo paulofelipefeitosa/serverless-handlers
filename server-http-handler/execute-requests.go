@@ -20,6 +20,34 @@ func Now() uint64 {
 	return uint64(nanotime())
 }
 
+func setupCRIU(jarPath string, serverLogFile string) (*exec.Cmd, io.ReadCloser, error) {
+	fmt.Fprintln(os.Stderr, "Criu Handler Type")
+	upServerCmd = exec.Command("criu", "restore", "-d", "-v3", "-o", "restore.log")
+	upServerCmd.Env = os.Environ()
+	
+	currentDir, _ := os.Getwd()
+	upServerCmd.Dir = fmt.Sprintf("%s/%s", currentDir, jarPath)
+	fmt.Fprintf(os.Stderr, "Dir [%s]\n", upServerCmd.Dir)
+	
+	serverStdout, err = os.Open(serverLogFile)
+	return upServerCmd, serverStdout, err
+}
+
+func setupDefault(jarPath string, agentDir string, trace bool) (*exec.Cmd, io.ReadCloser, error) {
+	fmt.Fprintln(os.Stderr, "Default Handler Type")
+	var upServerCmd* exec.Cmd
+	if trace {
+		upServerCmd = exec.Command("bpftrace", "-c", 
+									"\"java", fmt.Sprintf("-agentpath:%s/libagent.so", agentDir, create-file), "-jar", jarPath, "\"", 
+									fmt.Sprintf("%s/%s", agentDir, bpfSpecFile))
+	} else {
+		upServerCmd = exec.Command("java", "-jar", jarPath)
+	}
+	upServerCmd.Env = os.Environ()
+	serverStdout, err = upServerCmd.StdoutPipe()
+	return upServerCmd, serverStdout, err
+}
+
 func main() {
 	serverAddress := os.Args[1]
 	endpoint := os.Args[2]
