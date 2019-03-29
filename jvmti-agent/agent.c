@@ -14,7 +14,7 @@ static jrawMonitorID rawMonitorID;
 static struct timespec tms;
 
 static long long getCurrentTimestamp() {
-    if(clock_gettime(CLOCK_REALTIME, &tms)) {
+    if(clock_gettime(CLOCK_MONOTONIC, &tms)) {
         return -1;
     }
     long long nanosecs = tms.tv_sec * 1000000000;
