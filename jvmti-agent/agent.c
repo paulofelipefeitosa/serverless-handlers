@@ -3,7 +3,6 @@
 #include <string.h>
 #include <time.h>
 #include "jvmti.h"
-#include "GC.h"
 
 static void check_jvmti_errors(jvmtiEnv *jvmti, jvmtiError errnum, const char *str);
 static void trace(jvmtiEnv *jvmti_env, const char* fmt, ...);
@@ -244,10 +243,6 @@ static void check_jvmti_errors(jvmtiEnv *jvmti,
 
         printf("ERROR: JVMTI: [%d] %s - %s\n", errnum, (errnum_str == NULL ? "Unknown": errnum_str), (str == NULL? "" : str));
     }
-}
-
-JNIEXPORT void JNICALL Java_GC_force(JNIEnv *env, jclass js) {
-    (*jvmti)->ForceGarbageCollection(jvmti);
 }
 
 JNIEXPORT void JNICALL Agent_OnUnload(JavaVM *vm) {

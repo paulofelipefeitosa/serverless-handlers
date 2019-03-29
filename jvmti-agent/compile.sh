@@ -10,5 +10,5 @@ echo "Generating libagent.so"
 gcc -shared -o libagent.so agent.o
 
 echo "Compiling Java Code for Test"
-javac Nothing.java GC.java
+javac Nothing.java
 
