@@ -7,7 +7,9 @@ IMAGE_URL=$4 # URL to download image
 REP_EXEC=$5 # integer value
 REP_REQ=$6 # integer value
 HANDLER_TYPE=$7 # criu or no-criu
-PATH2JVM_INCLUDES=$8 # /usr/lib/jvm/java-8-oracle
+OPT_PATH=$8 # CRIU: /usr/lib/jvm/java-8-oracle
+TRACE=$9 # y or n
+TRACER_DIR=${10} # Agent Dir
 
 APP_DIR=$TYPE_DIR/$APP_NAME
 JAR_PATH=$APP_DIR/target/$JAR_NAME
@@ -25,7 +27,7 @@ dump_criu_app() {
 
 	echo "Building $APP_DIR App Classes"
 	javac *.java
-	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"$PATH2JVM_INCLUDES/include/" -I"$PATH2JVM_INCLUDES/include/linux/" GC.c -o libgc.so
+	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"$OPT_PATH/include/" -I"$OPT_PATH/include/linux/" GC.c -o libgc.so
 
 	set +e
 	killall -v java
@@ -84,7 +86,8 @@ cd -
 
 echo "Starting experiment"
 
-RESULTS_FILENAME=$TYPE_DIR-$APP_NAME-"$(date +%s)"-$REP_EXEC-$REP_REQ.csv
+CURRENT_TS=$(date +%s)
+RESULTS_FILENAME=$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ.csv
 
 echo "Number of executions [$REP_EXEC]"
 echo "Number of requests [$REP_REQ]"
@@ -98,15 +101,15 @@ do
 	EXECUTION_SUCCESS=-1
 	while [ $EXECUTION_SUCCESS -ne 0 ];
 	do
-		if [ "$TYPE_DIR" == "server-http-handler" ];
+		if [ $TYPE_DIR == "server-http-handler" ];
 		then
-			if [ "$HANDLER_TYPE" == "criu" ];
+			if [ $HANDLER_TYPE == "criu" ];
 			then
 				echo "HTTP Server CRIU Handler"
 				dump_criu_app
 
 				set +e
-				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $APP_DIR $HANDLER_TYPE $APP_DIR/$CRIU_APP_OUTPUT >> $RESULTS_FILENAME
+				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $APP_DIR $HANDLER_TYPE $TRACE $APP_DIR/$CRIU_APP_OUTPUT >> $RESULTS_FILENAME
 				EXECUTION_SUCCESS=$?
 
 				echo "Try to kill HTTP Server Handler process"
@@ -118,12 +121,42 @@ do
 			else
 				echo "HTTP Server Handler"
 
-				set +e
-				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE "no-path" >> $RESULTS_FILENAME
-				EXECUTION_SUCCESS=$?
-				set -e
+				if [ $TRACE == "y" ];
+				then
+					echo "Compiling JVMTI Agent"
+					cd jvmti-agent
+					bash compile.sh $OPT_PATH
+					cd -
+
+					SCRIPT_PID=$$
+
+					APP_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-APP.out
+					JVMTI_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-JVMTI.out
+					BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-BPFTRACE.out
+					bpftrace -B 'line' $TRACER_DIR/execve-clone-tracer.bt > $BPFTRACE_OUT &
+					BPF_PID=$!
+
+					sleep 1
+
+					scale=0.1 image_path=${IMAGE_PATH} java -agentpath:${TRACER_DIR}/libagent.so=${JVMTI_OUT} -jar ${JAR_PATH} > ${APP_OUT} &
+					APP_PID=$!
+					echo "Script PID [$SCRIPT_PID]"
+					echo "Java PID [$APP_PID]"
+					
+					./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE "y" $APP_OUT >> $RESULTS_FILENAME
+					EXECUTION_SUCCESS=$?
+
+					kill $APP_PID $BPF_PID
+
+					exit 0
+				else
+					set +e
+					scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE $TRACE $OPT_PATH >> $RESULTS_FILENAME
+					EXECUTION_SUCCESS=$?
+					set -e
+				fi
 			fi
-		elif [ "$TYPE_DIR" == "std-server-handler" ]
+		elif [ $TYPE_DIR == "std-server-handler" ]
 		then
 			echo "STD Handler of Type [$HANDLER_TYPE]"
 			set +e
