@@ -9,6 +9,7 @@ import(
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 	_ "unsafe" // required to use //go:linkname
 )
 
@@ -16,35 +17,28 @@ import(
 //go:linkname nanotime runtime.nanotime
 func nanotime() int64
 
-func Now() uint64 {
-	return uint64(nanotime())
+func Now() int64 {
+	return int64(nanotime())
 }
 
 func setupCRIU(jarPath string, serverLogFile string) (*exec.Cmd, io.ReadCloser, error) {
 	fmt.Fprintln(os.Stderr, "Criu Handler Type")
-	upServerCmd = exec.Command("criu", "restore", "-d", "-v3", "-o", "restore.log")
+	upServerCmd := exec.Command("criu", "restore", "-d", "-v3", "-o", "restore.log")
 	upServerCmd.Env = os.Environ()
 	
 	currentDir, _ := os.Getwd()
 	upServerCmd.Dir = fmt.Sprintf("%s/%s", currentDir, jarPath)
 	fmt.Fprintf(os.Stderr, "Dir [%s]\n", upServerCmd.Dir)
 	
-	serverStdout, err = os.Open(serverLogFile)
+	serverStdout, err := os.Open(serverLogFile)
 	return upServerCmd, serverStdout, err
 }
 
-func setupDefault(jarPath string, agentDir string, trace bool) (*exec.Cmd, io.ReadCloser, error) {
+func setupDefault(jarPath string) (*exec.Cmd, io.ReadCloser, error) {
 	fmt.Fprintln(os.Stderr, "Default Handler Type")
-	var upServerCmd* exec.Cmd
-	if trace {
-		upServerCmd = exec.Command("bpftrace", "-c", 
-									"\"java", fmt.Sprintf("-agentpath:%s/libagent.so", agentDir, create-file), "-jar", jarPath, "\"", 
-									fmt.Sprintf("%s/%s", agentDir, bpfSpecFile))
-	} else {
-		upServerCmd = exec.Command("java", "-jar", jarPath)
-	}
+	upServerCmd := exec.Command("java", "-jar", jarPath)
 	upServerCmd.Env = os.Environ()
-	serverStdout, err = upServerCmd.StdoutPipe()
+	serverStdout, err := upServerCmd.StdoutPipe()
 	return upServerCmd, serverStdout, err
 }
 
@@ -55,7 +49,8 @@ func main() {
 	executionID := os.Args[4]
 	jarPath := os.Args[5]
 	handlerType := os.Args[6]
-	serverLogFile := os.Args[7]
+	trace := os.Args[7]
+	optPath := os.Args[8]
 
 	if err != nil {
 		log.Fatal(err)
@@ -65,33 +60,34 @@ func main() {
     var upServerCmd* exec.Cmd
     var serverStdout io.ReadCloser
 	if handlerType == "criu" {
-		fmt.Fprintln(os.Stderr, "Criu Handler Type")
-		upServerCmd = exec.Command("criu", "restore", "-d", "-v3", "-o", "restore.log")
-		upServerCmd.Env = os.Environ()
-		
-		currentDir, _ := os.Getwd()
-		upServerCmd.Dir = fmt.Sprintf("%s/%s", currentDir, jarPath)
-		fmt.Fprintf(os.Stderr, "Dir [%s]\n", upServerCmd.Dir)
-		
-		serverStdout, err = os.Open(serverLogFile)
+		fmt.Fprintln(os.Stderr, "CRIU")
+		upServerCmd, serverStdout, err = setupCRIU(jarPath, optPath)
+	} else if trace == "y" {
+		fmt.Fprintln(os.Stderr, "TRACE")
+		upServerCmd = nil
+		serverStdout, err = os.Open(optPath)
 	} else {
-		fmt.Fprintln(os.Stderr, "Default Handler Type")
-		upServerCmd = exec.Command("java", "-jar", jarPath)
-		upServerCmd.Env = os.Environ()
-		serverStdout, err = upServerCmd.StdoutPipe()
+		fmt.Fprintln(os.Stderr, "DEFAULT")
+		upServerCmd, serverStdout, err = setupDefault(jarPath)
 	}
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Start Http Server
-	fmt.Fprintln(os.Stderr, "Start HTTP Server")
+	var startHTTPServerTS int64
+	if upServerCmd != nil {
+		fmt.Println(os.Stderr, strings.Join(upServerCmd.Args, ", "))
+		// Start Http Server
+		fmt.Fprintln(os.Stderr, "Start HTTP Server")
 
-	startHTTPServerTS := Now()
-	if err := upServerCmd.Start(); err != nil {
-		log.Fatal(err)
+		startHTTPServerTS = Now()
+		if err := upServerCmd.Start(); err != nil {
+			log.Fatal(err)
+		}
 	}
+
+	fmt.Fprintln(os.Stderr, "Get Ready Time")
 
 	httpServerReadyTS, httpServerServiceTS, err := getHTTPServerReadyAndServiceTS(functionURL, serverStdout)
 	fmt.Fprintln(os.Stderr, "Got Ready Time")
@@ -108,17 +104,23 @@ func main() {
 
 	fmt.Fprintf(os.Stderr, "Values for Ready Time %d, %d\n", httpServerReadyTS, httpServerServiceTS)
 
-	// Apply requests
-	fmt.Fprintln(os.Stderr, "Applying requests")
-	roundTrip, serviceTime := getRoundTripAndServiceTime(nRequests, functionURL, serverStdout)
+	if trace != "y" {
+		// Apply requests
+		fmt.Fprintln(os.Stderr, "Applying requests")
+		roundTrip, serviceTime := getRoundTripAndServiceTime(nRequests, functionURL, serverStdout)
 
-	// Write results
-	fmt.Fprintln(os.Stderr, "Writing results")
-	fmt.Printf("%s,%s,%d,%d\n", "RuntimeReadyTime", executionID, 0, httpServerReadyTS - startHTTPServerTS)
-	fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, 0, httpServerServiceTS - httpServerReadyTS)
-	for i := 1; i <= len(roundTrip); i++ {
-		fmt.Printf("%s,%s,%d,%d\n", "RoundTripTime", executionID, i, roundTrip[i - 1])
-		fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, i, serviceTime[i - 1])
+		// Write results
+		fmt.Fprintln(os.Stderr, "Writing results")
+		fmt.Printf("%s,%s,%d,%d\n", "RuntimeReadyTime", executionID, 0, httpServerReadyTS - startHTTPServerTS)
+		fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, 0, httpServerServiceTS - httpServerReadyTS)
+		for i := 1; i <= len(roundTrip); i++ {
+			fmt.Printf("%s,%s,%d,%d\n", "RoundTripTime", executionID, i, roundTrip[i - 1])
+			fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, i, serviceTime[i - 1])
+		}
+	} else {
+		// Write results
+		fmt.Fprintln(os.Stderr, "Writing results")
+		fmt.Printf("%s,%s,%d,%d\n", "Ready2ServeTS", executionID, 0, httpServerReadyTS)
 	}
 
 	serverStdout.Close()
@@ -129,7 +131,9 @@ func main() {
 		log.Fatal("failed to kill process: ", err)
 	}
 	fmt.Fprintln(os.Stderr, fmt.Sprintf("Waiting...\n"))
-	upServerCmd.Process.Wait()
+	if upServerCmd != nil {
+		upServerCmd.Process.Wait()
+	}
 
 	fmt.Fprintln(os.Stderr, fmt.Sprintf("End of execution: %s\n", executionID))
 
@@ -163,8 +167,11 @@ func getHTTPServerReadyAndServiceTS(functionURL string, serverStdout io.ReadClos
 			if resp.StatusCode == http.StatusOK {
 				io.Copy(ioutil.Discard, resp.Body)
 				resp.Body.Close()
+				fmt.Fprintln(os.Stderr, "Here")
 				fmt.Fscanf(serverStdout, "T4: %d", &httpServerReadyTS)
+				fmt.Fprintln(os.Stderr, "Get T4")
 				fmt.Fscanf(serverStdout, "T6: %d", &endServiceTS)
+				fmt.Fprintln(os.Stderr, "Get T6")
 				return httpServerReadyTS, endServiceTS, nil
 			} else {
 				return -1, -1, fmt.Errorf("Server is up, but HTTP response is not OK!\nStatusCode: %d\n", resp.StatusCode)

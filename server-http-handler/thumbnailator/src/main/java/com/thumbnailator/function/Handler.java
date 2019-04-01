@@ -69,9 +69,11 @@ public class Handler implements com.thumbnailator.model.IHandler {
     public String callFunction() {
         String err = "";
         try {
+            System.out.println("OK");
             AffineTransform transform = AffineTransform.getScaleInstance(scale, scale); 
             AffineTransformOp op = new AffineTransformOp(transform, AffineTransformOp.TYPE_BILINEAR); 
             op.filter(image, null).flush();
+            System.out.println("OK");
         } catch (Exception e) {
             err = e.toString() + System.lineSeparator()
             		+ e.getCause() + System.lineSeparator()
