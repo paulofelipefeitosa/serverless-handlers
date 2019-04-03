@@ -17,7 +17,6 @@ import javax.imageio.ImageIO;
 public class Handler implements com.thumbnailator.model.IHandler {
 
     public IResponse Handle(IRequest req) {
-        System.out.println("T4: " + System.nanoTime());
         List<GarbageCollectorMXBean> gcs = ManagementFactory.getGarbageCollectorMXBeans();
         GarbageCollectorMXBean scavenge = gcs.get(0);
         GarbageCollectorMXBean markSweep = gcs.get(1);
@@ -51,7 +50,6 @@ public class Handler implements com.thumbnailator.model.IHandler {
 
         Response res = new Response();
         res.setBody(output);
-        System.out.println("T6: " + System.nanoTime());
         return res;
     }
 
@@ -69,11 +67,9 @@ public class Handler implements com.thumbnailator.model.IHandler {
     public String callFunction() {
         String err = "";
         try {
-            System.out.println("OK");
             AffineTransform transform = AffineTransform.getScaleInstance(scale, scale); 
             AffineTransformOp op = new AffineTransformOp(transform, AffineTransformOp.TYPE_BILINEAR); 
             op.filter(image, null).flush();
-            System.out.println("OK");
         } catch (Exception e) {
             err = e.toString() + System.lineSeparator()
             		+ e.getCause() + System.lineSeparator()

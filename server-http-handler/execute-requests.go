@@ -89,7 +89,7 @@ func main() {
 
 	fmt.Fprintln(os.Stderr, "Get Ready Time")
 
-	httpServerReadyTS, httpServerServiceTS, err := getHTTPServerReadyAndServiceTS(functionURL, serverStdout)
+	timestamps, err := getHTTPServerReadyAndServiceTS(functionURL, serverStdout)
 	fmt.Fprintln(os.Stderr, "Got Ready Time")
 
 	if err != nil {
@@ -102,7 +102,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Fprintf(os.Stderr, "Values for Ready Time %d, %d\n", httpServerReadyTS, httpServerServiceTS)
+	fmt.Fprintf(os.Stderr, "Values for Ready Time %d, %d\n", timestamps[2], timestamps[3])
 
 	if trace != "y" {
 		// Apply requests
@@ -111,8 +111,8 @@ func main() {
 
 		// Write results
 		fmt.Fprintln(os.Stderr, "Writing results")
-		fmt.Printf("%s,%s,%d,%d\n", "RuntimeReadyTime", executionID, 0, httpServerReadyTS - startHTTPServerTS)
-		fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, 0, httpServerServiceTS - httpServerReadyTS)
+		fmt.Printf("%s,%s,%d,%d\n", "RuntimeReadyTime", executionID, 0, timestamps[2] - startHTTPServerTS)
+		fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, 0, timestamps[3] - timestamps[2])
 		for i := 1; i <= len(roundTrip); i++ {
 			fmt.Printf("%s,%s,%d,%d\n", "RoundTripTime", executionID, i, roundTrip[i - 1])
 			fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, i, serviceTime[i - 1])
@@ -120,18 +120,20 @@ func main() {
 	} else {
 		// Write results
 		fmt.Fprintln(os.Stderr, "Writing results")
-		fmt.Printf("%s,%s,%d,%d\n", "Ready2ServeTS", executionID, 0, httpServerReadyTS)
+		fmt.Printf("%s,%s,%d,%d\n", "MainEntry", executionID, 0, timestamps[0])
+		fmt.Printf("%s,%s,%d,%d\n", "MainExit", executionID, 0, timestamps[1])
+		fmt.Printf("%s,%s,%d,%d\n", "Ready2Serve", executionID, 0, timestamps[2])
 	}
 
 	serverStdout.Close()
 
-	fmt.Fprintln(os.Stderr, fmt.Sprintf("Killing Process: %d\n", upServerCmd.Process.Pid))
-	// Kill Http server process
-	if err := upServerCmd.Process.Kill(); err != nil {
-		log.Fatal("failed to kill process: ", err)
-	}
-	fmt.Fprintln(os.Stderr, fmt.Sprintf("Waiting...\n"))
 	if upServerCmd != nil {
+		fmt.Fprintln(os.Stderr, fmt.Sprintf("Killing Process: %d\n", upServerCmd.Process.Pid))
+		// Kill Http server process
+		if err := upServerCmd.Process.Kill(); err != nil {
+			log.Fatal("failed to kill process: ", err)
+		}
+		fmt.Fprintln(os.Stderr, fmt.Sprintf("Waiting...\n"))
 		upServerCmd.Process.Wait()
 	}
 
@@ -158,29 +160,29 @@ func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverStdou
 	return roundTrip, serviceTime
 }
 
-func getHTTPServerReadyAndServiceTS(functionURL string, serverStdout io.ReadCloser) (int64, int64, error) {
+func getHTTPServerReadyAndServiceTS(functionURL string, serverStdout io.ReadCloser) ([4]int64, error) {
 	maxFailsToStart := int64(2000)
-	var failCount, httpServerReadyTS, endServiceTS int64
+	var failCount int64
+	var timestamps [4]int64
 	for {
 		resp, err := http.Get(functionURL)
 		if err == nil  {
 			if resp.StatusCode == http.StatusOK {
 				io.Copy(ioutil.Discard, resp.Body)
 				resp.Body.Close()
-				fmt.Fprintln(os.Stderr, "Here")
-				fmt.Fscanf(serverStdout, "T4: %d", &httpServerReadyTS)
-				fmt.Fprintln(os.Stderr, "Get T4")
-				fmt.Fscanf(serverStdout, "T6: %d", &endServiceTS)
-				fmt.Fprintln(os.Stderr, "Get T6")
-				return httpServerReadyTS, endServiceTS, nil
+				fmt.Fscanf(serverStdout, "Entered in main: %d", &timestamps[0])
+				fmt.Fscanf(serverStdout, "Exit from main: %d", &timestamps[1])
+				fmt.Fscanf(serverStdout, "T4: %d", &timestamps[2])
+				fmt.Fscanf(serverStdout, "T6: %d", &timestamps[3])
+				return timestamps, nil
 			} else {
-				return -1, -1, fmt.Errorf("Server is up, but HTTP response is not OK!\nStatusCode: %d\n", resp.StatusCode)
+				return timestamps, fmt.Errorf("Server is up, but HTTP response is not OK!\nStatusCode: %d\n", resp.StatusCode)
 			}
 		} else {
 			time.Sleep(5 * time.Millisecond)
 			failCount += 1
 			if failCount == maxFailsToStart {
-				return -1, -1, err
+				return timestamps, err
 			}
 		}
 	}

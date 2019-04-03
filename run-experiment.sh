@@ -123,37 +123,29 @@ do
 
 				if [ $TRACE == "y" ];
 				then
-					echo "Compiling JVMTI Agent"
-					cd jvmti-agent
-					bash compile.sh $OPT_PATH
-					cd -
-
 					SCRIPT_PID=$$
 
 					APP_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-APP.out
-					JVMTI_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-JVMTI.out
 					BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-BPFTRACE.out
 					bpftrace -B 'line' $TRACER_DIR/execve-clone-tracer.bt > $BPFTRACE_OUT &
 					BPF_PID=$!
 
 					sleep 1
 
-					scale=0.1 image_path=${IMAGE_PATH} java -agentpath:${TRACER_DIR}/libagent.so=${JVMTI_OUT} -jar ${JAR_PATH} > ${APP_OUT} &
+					scale=0.1 image_path=${IMAGE_PATH} java -jar ${JAR_PATH} > ${APP_OUT} &
 					APP_PID=$!
 					echo "Script PID [$SCRIPT_PID]"
 					echo "Java PID [$APP_PID]"
 					
 					./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE "y" $APP_OUT >> $RESULTS_FILENAME
-					EXECUTION_SUCCESS=$?
+					EXECUTION_SUCCESS=0
 
 					kill $APP_PID $BPF_PID
 
 					exit 0
 				else
-					set +e
 					scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE $TRACE $OPT_PATH >> $RESULTS_FILENAME
-					EXECUTION_SUCCESS=$?
-					set -e
+					EXECUTION_SUCCESS=0
 				fi
 			fi
 		elif [ $TYPE_DIR == "std-server-handler" ]

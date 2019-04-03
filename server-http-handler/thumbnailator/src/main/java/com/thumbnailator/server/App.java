@@ -19,6 +19,7 @@ import com.thumbnailator.model.*;
 public class App {
 
     public static void main(String[] args) throws Exception {
+        System.out.println("Entered in main: " + System.nanoTime());
         int port = 9000;
 
         IHandler handler = new com.thumbnailator.function.Handler();
@@ -30,6 +31,8 @@ public class App {
         server.createContext("/", invokeHandler);
         server.setExecutor(Executors.newSingleThreadExecutor());
         server.start();
+        
+        System.out.println("Exit from main: " + System.nanoTime());
     }
 
     static class InvokeHandler implements HttpHandler {
@@ -41,6 +44,7 @@ public class App {
 
         @Override
         public void handle(HttpExchange t) throws IOException {
+            System.out.println("T4: " + System.nanoTime());
             String requestBody = "";
             String method = t.getRequestMethod();
 
@@ -56,7 +60,6 @@ public class App {
                 requestBody = result.toString("UTF-8");
             }
 
-            // System.out.println(requestBody);
             Headers reqHeaders = t.getRequestHeaders();
             Map<String, String> reqHeadersMap = new HashMap<String, String>();
 
@@ -66,10 +69,6 @@ public class App {
                     reqHeadersMap.put(header.getKey(), headerValues.get(0));
                 }
             }
-
-            // for(Map.Entry<String, String> entry : reqHeadersMap.entrySet()) {
-            // System.out.println("Req header " + entry.getKey() + " " + entry.getValue());
-            // }
 
             IRequest req = new Request(requestBody, reqHeadersMap, t.getRequestURI().getRawQuery(),
                     t.getRequestURI().getPath());
@@ -94,9 +93,8 @@ public class App {
             OutputStream os = t.getResponseBody();
             os.write(bytesOut);
             os.close();
-
-            // System.out.println("Request / " + Integer.toString(bytesOut.length) +" bytes
-            // written.");
+            
+            System.out.println("T6: " + System.nanoTime());
         }
     }
 
