@@ -18,6 +18,7 @@ def main():
             execve_req_pid = llist[0]
             execve_req_tid = llist[1]
             break
+
     eprint("execve req PID: " + str(execve_req_pid)) 
     eprint("execve req TID: " + str(execve_req_tid))
     clone_list = []
@@ -37,9 +38,12 @@ def main():
         else:
             eprint("Ops?? Not clone or execve, please check the file")
 
-    print "CloneEntry," + EXEC_ID + ",0," + str(clone_list[2])
-    print "CloneExit," + EXEC_ID + ",0," + str(clone_list[3])
-    print "ExecveEntry," + EXEC_ID + ",0," + str(execve_list[2])
-    print "ExecveExit," + EXEC_ID + ",0," + str(execve_list[3])
+    if not (execve_list == []):
+        print "CloneEntry," + EXEC_ID + ",0," + str(clone_list[2])
+        print "CloneExit," + EXEC_ID + ",0," + str(clone_list[3])
+        print "ExecveEntry," + EXEC_ID + ",0," + str(execve_list[2])
+        print "ExecveExit," + EXEC_ID + ",0," + str(execve_list[3])
+    else:
+        eprint("Could not identify execve to java bin")
 
 main()

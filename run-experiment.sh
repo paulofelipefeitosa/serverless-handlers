@@ -121,26 +121,18 @@ do
 			else
 				echo "HTTP Server Handler"
 
-				if [ $TRACE == "y" ];
-				then
-					SCRIPT_PID=$$
+				BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-BPFTRACE.out
+				bpftrace -B 'line' $TRACER_DIR/execve-clone-tracer.bt > $BPFTRACE_OUT &
+				BPF_PID=$!
 
-					BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-BPFTRACE.out
-					bpftrace -B 'line' $TRACER_DIR/execve-clone-tracer.bt > $BPFTRACE_OUT &
-					BPF_PID=$!
+				sleep 1
 
-					sleep 1
+				./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE $TRACE $OPT_PATH >> $RESULTS_FILENAME
+				EXECUTION_SUCCESS=0
 
-					./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE "y" "no-file" >> $RESULTS_FILENAME
-					EXECUTION_SUCCESS=0
+				kill $BPF_PID
 
-					kill $BPF_PID
-
-					python $TRACER_DIR/parser.py $i < $BPFTRACE_OUT >> $RESULTS_FILENAME
-				else
-					scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE $TRACE $OPT_PATH >> $RESULTS_FILENAME
-					EXECUTION_SUCCESS=0
-				fi
+				python $TRACER_DIR/parser.py $i < $BPFTRACE_OUT >> $RESULTS_FILENAME
 			fi
 		elif [ $TYPE_DIR == "std-server-handler" ]
 		then
