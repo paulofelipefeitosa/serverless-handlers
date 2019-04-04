@@ -131,17 +131,10 @@ do
 
 					sleep 1
 
-					scale=0.1 image_path=${IMAGE_PATH} java -jar ${JAR_PATH} | ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE "y" "no-file" >> $RESULTS_FILENAME &
-					REQ_PID=$!
+					./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE "y" "no-file" >> $RESULTS_FILENAME
 					EXECUTION_SUCCESS=0
 
-					echo "$REQ_PID..."
-					wait $REQ_PID
-					echo "$REQ_PID..."
-					killall java
 					kill $BPF_PID
-
-					exit 0
 				else
 					scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE $TRACE $OPT_PATH >> $RESULTS_FILENAME
 					EXECUTION_SUCCESS=0

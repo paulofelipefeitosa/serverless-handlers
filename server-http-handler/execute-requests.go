@@ -9,7 +9,6 @@ import(
 	"fmt"
 	"io"
 	"io/ioutil"
-	"strings"
 	_ "unsafe" // For go:linkname
 )
 
@@ -61,8 +60,6 @@ func main() {
     var serverStdout io.ReadCloser
 	if handlerType == "criu" {
 		upServerCmd, serverStdout, err = setupCRIU(jarPath, optPath)
-	} else if trace == "y" {
-		serverStdout = os.Stdin
 	} else {
 		upServerCmd, serverStdout, err = setupDefault(jarPath)
 	}
@@ -71,16 +68,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var startHTTPServerTS int64
-	if upServerCmd != nil {
-		fmt.Println(os.Stderr, strings.Join(upServerCmd.Args, ", "))
-		// Start Http Server
-		fmt.Fprintln(os.Stderr, "Start HTTP Server")
-
-		startHTTPServerTS = Now()
-		if err := upServerCmd.Start(); err != nil {
-			log.Fatal(err)
-		}
+	startHTTPServerTS := Now()
+	if err := upServerCmd.Start(); err != nil {
+		log.Fatal(err)
 	}
 	
 	timestamps, err := getHTTPServerReadyAndServiceTS(functionURL, serverStdout)
@@ -121,15 +111,13 @@ func main() {
 
 	serverStdout.Close()
 
-	if upServerCmd != nil {
-		fmt.Fprintln(os.Stderr, fmt.Sprintf("Killing Process: %d\n", upServerCmd.Process.Pid))
-		// Kill Http server process
-		if err := upServerCmd.Process.Kill(); err != nil {
-			log.Fatal("failed to kill process: ", err)
-		}
-		fmt.Fprintln(os.Stderr, fmt.Sprintf("Waiting...\n"))
-		upServerCmd.Process.Wait()
+	fmt.Fprintln(os.Stderr, fmt.Sprintf("Killing Process: %d\n", upServerCmd.Process.Pid))
+	// Kill Http server process
+	if err := upServerCmd.Process.Kill(); err != nil {
+		log.Fatal("failed to kill process: ", err)
 	}
+	fmt.Fprintln(os.Stderr, fmt.Sprintf("Waiting...\n"))
+	upServerCmd.Process.Wait()
 
 	fmt.Fprintln(os.Stderr, fmt.Sprintf("End of execution: %s\n", executionID))
 
