@@ -10,12 +10,12 @@ import(
 	"io"
 	"io/ioutil"
 	"strings"
-	_ "unsafe" // required to use //go:linkname
+	_ "unsafe" // For go:linkname
 )
 
 //go:noescape
 //go:linkname nanotime runtime.nanotime
-func nanotime() int64
+func nanotime() int64 
 
 func Now() int64 {
 	return int64(nanotime())
@@ -60,14 +60,10 @@ func main() {
     var upServerCmd* exec.Cmd
     var serverStdout io.ReadCloser
 	if handlerType == "criu" {
-		fmt.Fprintln(os.Stderr, "CRIU")
 		upServerCmd, serverStdout, err = setupCRIU(jarPath, optPath)
 	} else if trace == "y" {
-		fmt.Fprintln(os.Stderr, "TRACE")
-		upServerCmd = nil
-		serverStdout, err = os.Open(optPath)
+		serverStdout = os.Stdin
 	} else {
-		fmt.Fprintln(os.Stderr, "DEFAULT")
 		upServerCmd, serverStdout, err = setupDefault(jarPath)
 	}
 
@@ -86,9 +82,7 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-
-	fmt.Fprintln(os.Stderr, "Get Ready Time")
-
+	
 	timestamps, err := getHTTPServerReadyAndServiceTS(functionURL, serverStdout)
 	fmt.Fprintln(os.Stderr, "Got Ready Time")
 
@@ -102,7 +96,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Fprintf(os.Stderr, "Values for Ready Time %d, %d\n", timestamps[2], timestamps[3])
+	fmt.Fprintf(os.Stderr, "Values for Ready Time [%d, %d]\n", timestamps[2], timestamps[3])
 
 	if trace != "y" {
 		// Apply requests
@@ -160,10 +154,10 @@ func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverStdou
 	return roundTrip, serviceTime
 }
 
-func getHTTPServerReadyAndServiceTS(functionURL string, serverStdout io.ReadCloser) ([4]int64, error) {
+func getHTTPServerReadyAndServiceTS(functionURL string, serverStdout io.ReadCloser) ([]int64, error) {
 	maxFailsToStart := int64(2000)
 	var failCount int64
-	var timestamps [4]int64
+	timestamps := make([]int64, 4)
 	for {
 		resp, err := http.Get(functionURL)
 		if err == nil  {
