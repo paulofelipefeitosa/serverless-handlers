@@ -125,7 +125,10 @@ do
 				bpftrace -B 'line' $TRACER_DIR/execve-clone-tracer.bt > $BPFTRACE_OUT &
 				BPF_PID=$!
 
-				sleep 1
+				while [ $(wc -c "$BPFTRACE_OUT" | awk '{print $1}') -eq 0 ];
+				do
+					sleep 1
+				done
 
 				./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE $TRACE $OPT_PATH >> $RESULTS_FILENAME
 				EXECUTION_SUCCESS=0
