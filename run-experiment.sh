@@ -122,7 +122,7 @@ do
 				echo "HTTP Server Handler"
 
 				BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-BPFTRACE.out
-				bpftrace -B 'line' $TRACER_DIR/execve-clone-tracer.bt > $BPFTRACE_OUT &
+				bpftrace -B 'line' $TRACER_DIR/execve-clone-fork-probes.bt > $BPFTRACE_OUT &
 				BPF_PID=$!
 
 				while [ $(wc -c "$BPFTRACE_OUT" | awk '{print $1}') -eq 0 ];
@@ -135,7 +135,7 @@ do
 
 				kill $BPF_PID
 
-				python $TRACER_DIR/parser.py $i < $BPFTRACE_OUT >> $RESULTS_FILENAME
+				python $TRACER_DIR/execve-clone-fork-probes-parser.py $i < $BPFTRACE_OUT >> $RESULTS_FILENAME
 			fi
 		elif [ $TYPE_DIR == "std-server-handler" ]
 		then
