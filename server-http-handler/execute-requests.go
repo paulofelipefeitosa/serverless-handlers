@@ -16,6 +16,7 @@ import(
 //go:linkname nanotime runtime.nanotime
 func nanotime() int64 
 
+// Get monotonic clock time to be compatible with the bpftrace timestamps
 func Now() int64 {
 	return int64(nanotime())
 }
