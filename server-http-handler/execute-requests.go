@@ -20,7 +20,7 @@ func Now() int64 {
 	return int64(nanotime())
 }
 
-func setupCRIU(jarPath string, serverLogFile string) (*exec.Cmd, io.ReadCloser, error) {
+func startCRIUServer(jarPath string, serverLogFile string) (*exec.Cmd, io.ReadCloser, error) {
 	fmt.Fprintln(os.Stderr, "Criu Handler Type")
 	upServerCmd := exec.Command("criu", "restore", "-d", "-v3", "-o", "restore.log")
 	upServerCmd.Env = os.Environ()
@@ -33,7 +33,7 @@ func setupCRIU(jarPath string, serverLogFile string) (*exec.Cmd, io.ReadCloser, 
 	return upServerCmd, serverStdout, err
 }
 
-func setupDefault(jarPath string) (*exec.Cmd, io.ReadCloser, error) {
+func startDefaultServer(jarPath string) (*exec.Cmd, io.ReadCloser, error) {
 	fmt.Fprintln(os.Stderr, "Default Handler Type")
 	upServerCmd := exec.Command("java", "-jar", jarPath)
 	upServerCmd.Env = os.Environ()
