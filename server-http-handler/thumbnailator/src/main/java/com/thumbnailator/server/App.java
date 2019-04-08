@@ -44,7 +44,6 @@ public class App {
 
         @Override
         public void handle(HttpExchange t) throws IOException {
-            System.out.println("T4: " + System.nanoTime());
             String requestBody = "";
             String method = t.getRequestMethod();
 
@@ -93,8 +92,6 @@ public class App {
             OutputStream os = t.getResponseBody();
             os.write(bytesOut);
             os.close();
-            
-            System.out.println("T6: " + System.nanoTime());
         }
     }
 
