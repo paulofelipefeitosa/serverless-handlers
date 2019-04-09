@@ -53,20 +53,23 @@ enum event_type {
     EVENT_RET,
 };
 
+enum sys_type {
+    CLONE,
+    EXECVE,
+};
+
 struct data_t {
     u32 pid;  // PID as in the userspace term (i.e. task->tgid in kernel)
     u32 ppid; // Parent PID as in the userspace term (i.e task->real_parent->tgid in kernel)
     char comm[TASK_COMM_LEN];
     char argv[ARGSIZE];
     enum event_type type;
+    enum sys_type stype;
     u64 ts;
     int retval;
 };
 
 BPF_PERF_OUTPUT(events);
-"""
-
-clone_text = """
 
 int syscall__clone(struct pt_regs *ctx)
 {
@@ -79,13 +82,11 @@ int syscall__clone(struct pt_regs *ctx)
     data.pid = bpf_get_current_pid_tgid() >> 32;
 
     task = (struct task_struct *)bpf_get_current_task();
-    // Some kernels, like Ubuntu 4.13.0-generic, return 0
-    // as the real_parent->tgid.
-    // We use the get_ppid function as a fallback in those cases. (#1883)
     data.ppid = task->real_parent->tgid;
 
     bpf_get_current_comm(&data.comm, sizeof(data.comm));
     data.type = EVENT_ARG;
+    data.stype = CLONE;
 
     events.perf_submit(ctx, &data, sizeof(data));
 
@@ -93,9 +94,25 @@ int syscall__clone(struct pt_regs *ctx)
 }
 
 int do_ret_sys_clone(struct pt_regs *ctx)
-"""
+{
+    u64 event_ts = bpf_ktime_get_ns();
+    struct data_t data = {};
+    struct task_struct *task;
 
-exec_text = """
+    data.ts = event_ts;
+    data.pid = bpf_get_current_pid_tgid() >> 32;
+
+    task = (struct task_struct *)bpf_get_current_task();
+    data.ppid = task->real_parent->tgid;
+
+    bpf_get_current_comm(&data.comm, sizeof(data.comm));
+    data.type = EVENT_RET;
+    data.stype = CLONE;
+    data.retval = PT_REGS_RC(ctx);
+    events.perf_submit(ctx, &data, sizeof(data));
+
+    return 0;
+}
 
 static int __submit_arg(struct pt_regs *ctx, void *ptr, struct data_t *data)
 {
@@ -118,13 +135,11 @@ int syscall__execve(struct pt_regs *ctx,
     data.pid = bpf_get_current_pid_tgid() >> 32;
 
     task = (struct task_struct *)bpf_get_current_task();
-    // Some kernels, like Ubuntu 4.13.0-generic, return 0
-    // as the real_parent->tgid.
-    // We use the get_ppid function as a fallback in those cases. (#1883)
     data.ppid = task->real_parent->tgid;
 
     bpf_get_current_comm(&data.comm, sizeof(data.comm));
     data.type = EVENT_ARG;
+    data.stype = EXECVE;
 
     __submit_arg(ctx, (void *)filename, &data);
 
@@ -132,9 +147,6 @@ int syscall__execve(struct pt_regs *ctx,
 }
 
 int do_ret_sys_execve(struct pt_regs *ctx)
-"""
-
-ret_body_text = """
 {
     u64 event_ts = bpf_ktime_get_ns();
     struct data_t data = {};
@@ -144,13 +156,11 @@ ret_body_text = """
     data.pid = bpf_get_current_pid_tgid() >> 32;
 
     task = (struct task_struct *)bpf_get_current_task();
-    // Some kernels, like Ubuntu 4.13.0-generic, return 0
-    // as the real_parent->tgid.
-    // We use the get_ppid function as a fallback in those cases. (#1883)
     data.ppid = task->real_parent->tgid;
 
     bpf_get_current_comm(&data.comm, sizeof(data.comm));
     data.type = EVENT_RET;
+    data.stype = EXECVE;
     data.retval = PT_REGS_RC(ctx);
     events.perf_submit(ctx, &data, sizeof(data));
 
@@ -158,31 +168,29 @@ ret_body_text = """
 }
 """
 
-bpf_clone_text = bpf_text + clone_text + ret_body_text
-bpf_exec_text = bpf_text + exec_text + ret_body_text
 if args.ebpf:
-    print(bpf_clone_text)
-    print(bpf_exec_text)
+    print(bpf_text)
     exit()
 
 # initialize BPF probes
-b_clone = BPF(text=bpf_clone_text)
-clone_fnname = b_clone.get_syscall_fnname("clone")
-b_clone.attach_kprobe(event=clone_fnname, fn_name="syscall__clone")
-b_clone.attach_kretprobe(event=clone_fnname, fn_name="do_ret_sys_clone")
-
-b_exec = BPF(text=bpf_exec_text)
-exec_fnname = b_exec.get_syscall_fnname("execve")
-b_exec.attach_kprobe(event=exec_fnname, fn_name="syscall__execve")
-b_exec.attach_kretprobe(event=exec_fnname, fn_name="do_ret_sys_execve")
+b = BPF(text=bpf_text)
+clone_fnname = b.get_syscall_fnname("clone")
+execve_fnname = b.get_syscall_fnname("execve")
+b.attach_kprobe(event=clone_fnname, fn_name="syscall__clone")
+b.attach_kretprobe(event=clone_fnname, fn_name="do_ret_sys_clone")
+b.attach_kprobe(event=execve_fnname, fn_name="syscall__execve")
+b.attach_kretprobe(event=execve_fnname, fn_name="do_ret_sys_execve")
 
 # headers
-print("Clone Header: [%s, %s, %s, %s, %s, %s]" % ("PID", "P_PID", "RET_VAL", "START_TS", "END_TS", "P_COMM"))
-print("Execve Header: [%s, %s, %s, %s, %s, %s]" % ("PID", "P_PID", "RET_VAL", "START_TS", "END_TS", "P_COMM"))
+print("Header: [%s, %s, %s, %s, %s, %s]" % ("PID", "P_PID", "RET_VAL", "START_TS", "END_TS", "P_COMM"))
 
 class EventType(object):
     EVENT_ARG = 0
     EVENT_RET = 1
+
+class SysType(object):
+    CLONE = 0
+    EXECVE = 1
 
 argv_clone = defaultdict(list)
 argv_exec = defaultdict(list)
@@ -213,40 +221,49 @@ def print_event(event, event_name, argv_map):
             printb(b"[%d, %s, %d, %d, %d] %s: %s" % 
                 (event.pid, ppid, event.retval, arg_event.ts, event.ts, event_name, event.comm))
         except Exception as e:
-            printb(b"[%d, %s, %d, %d] %s invalid state, possible data race (there is no arg event): %s" % 
-                (event.pid, ppid, event.retval, event.ts, event_name, event.comm))
+            printb(b"[%d, %d, %d] %s invalid state, possible data race (there is no arg event): %s" % 
+                (event.pid, event.retval, event.ts, event_name, event.comm))
             pass
     else:
         printb("Cannot identify event type %s of event %s" % (event.type, event_name))
         raise Exception()
 
-def print_clone_event(cpu, data, size):
-    event = b_clone["events"].event(data)
+def get_sys_name(stype):
+    if stype == SysType.CLONE:
+        return "clone"
+    elif stype == SysType.EXECVE:
+        return "execve"
+    else:
+        return "unknown"
+
+def print_perf_event(cpu, data, size):
+    event = b["events"].event(data)
+    sys_name = get_sys_name(event.stype)
     skip = False
 
-    if args.name_clone and not re.search(bytes(args.name_clone), event.comm):
+    if sys_name == "clone":
+        if args.name_clone and not re.search(bytes(args.name_clone), event.comm):
+            skip = True
+        argv_map = argv_clone
+    elif sys_name == "execve":
+        if args.name_exec:
+            if event.type == EventType.EVENT_ARG and not re.search(bytes(args.name_exec), event.argv):
+                skip = True
+            elif event.type == EventType.EVENT_RET and not re.search(bytes(args.name_exec), event.comm):
+                skip = True
+        argv_map = argv_exec
+    else:
+        printb("unknown syscall event")
         skip = True
 
     if not skip:
-        print_event(event, "clone", argv_clone)
-
-def print_exec_event(cpu, data, size):
-    event = b_exec["events"].event(data)
-    skip = False
-
-    if args.name_exec and not re.search(bytes(args.name_exec), event.comm):
-        skip = True
-
-    if not skip:
-        print_event(event, "execve", argv_exec)
+        print_event(event, sys_name, argv_map)
 
 # loop with callback to print events
-b_clone["events"].open_perf_buffer(print_clone_event)
-b_exec["events"].open_perf_buffer(print_exec_event)
+b["events"].open_perf_buffer(print_perf_event)
 while 1:
     try:
-        b_clone.perf_buffer_poll()
-        b_exec.perf_buffer_poll()
+        b.perf_buffer_poll()
     except KeyboardInterrupt:
         try:
             del(argv_clone)
