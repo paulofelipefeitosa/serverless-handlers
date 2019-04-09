@@ -60,9 +60,9 @@ func main() {
     var upServerCmd* exec.Cmd
     var serverStdout io.ReadCloser
 	if handlerType == "criu" {
-		upServerCmd, serverStdout, err = setupCRIU(jarPath, optPath)
+		upServerCmd, serverStdout, err = startCRIUServer(jarPath, optPath)
 	} else {
-		upServerCmd, serverStdout, err = setupDefault(jarPath)
+		upServerCmd, serverStdout, err = startDefaultServer(jarPath)
 	}
 
 	if err != nil {
