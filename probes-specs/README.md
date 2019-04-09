@@ -7,13 +7,13 @@
 
 ### Run
 ```sh
-python clone-exec-dtpp.py -ne "<execve-pattern>" -nc "<clone-pattern>" > $BCC_TOOL_OUT &
+python -u clone-exec-dtpp.py -ne "<execve-pattern>" -nc "<clone-pattern>" > $BCC_TOOL_OUT &
 ```
 
 ### Parse
 Running the execve, clone & fork probes parser.
 ```sh
-python execve-clone-fork-probes-parser.py "<executionID>" < $BCC_TOOL_OUT
+python -u execve-clone-fork-probes-parser.py "<executionID>" < $BCC_TOOL_OUT
 ```
 
 ## BPFTrace
