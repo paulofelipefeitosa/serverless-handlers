@@ -7,7 +7,9 @@ IMAGE_URL=$4 # URL to download image
 REP_EXEC=$5 # integer value
 REP_REQ=$6 # integer value
 HANDLER_TYPE=$7 # criu or no-criu
-PATH2JVM_INCLUDES=$8 # /usr/lib/jvm/java-8-oracle
+OPT_PATH=$8 # CRIU: /usr/lib/jvm/java-8-oracle
+TRACE=$9 # y or n
+TRACER_DIR=${10} # Agent Dir
 
 APP_DIR=$TYPE_DIR/$APP_NAME
 JAR_PATH=$APP_DIR/target/$JAR_NAME
@@ -25,7 +27,7 @@ dump_criu_app() {
 
 	echo "Building $APP_DIR App Classes"
 	javac *.java
-	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"$PATH2JVM_INCLUDES/include/" -I"$PATH2JVM_INCLUDES/include/linux/" GC.c -o libgc.so
+	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"$OPT_PATH/include/" -I"$OPT_PATH/include/linux/" GC.c -o libgc.so
 
 	set +e
 	killall -v java
@@ -84,7 +86,8 @@ cd -
 
 echo "Starting experiment"
 
-RESULTS_FILENAME=$TYPE_DIR-$APP_NAME-"$(date +%s)"-$REP_EXEC-$REP_REQ.csv
+CURRENT_TS=$(date +%s)
+RESULTS_FILENAME=$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ.csv
 
 echo "Number of executions [$REP_EXEC]"
 echo "Number of requests [$REP_REQ]"
@@ -98,15 +101,15 @@ do
 	EXECUTION_SUCCESS=-1
 	while [ $EXECUTION_SUCCESS -ne 0 ];
 	do
-		if [ "$TYPE_DIR" == "server-http-handler" ];
+		if [ $TYPE_DIR == "server-http-handler" ];
 		then
-			if [ "$HANDLER_TYPE" == "criu" ];
+			if [ $HANDLER_TYPE == "criu" ];
 			then
 				echo "HTTP Server CRIU Handler"
 				dump_criu_app
 
 				set +e
-				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $APP_DIR $HANDLER_TYPE $APP_DIR/$CRIU_APP_OUTPUT >> $RESULTS_FILENAME
+				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $APP_DIR $HANDLER_TYPE $TRACE $APP_DIR/$CRIU_APP_OUTPUT >> $RESULTS_FILENAME
 				EXECUTION_SUCCESS=$?
 
 				echo "Try to kill HTTP Server Handler process"
@@ -118,12 +121,25 @@ do
 			else
 				echo "HTTP Server Handler"
 
-				set +e
-				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE "no-path" >> $RESULTS_FILENAME
-				EXECUTION_SUCCESS=$?
-				set -e
+				BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-BCCTOOL.out
+				bpftrace -B 'line' $TRACER_DIR/execve-clone-probes.bt > $BPFTRACE_OUT &
+				PROBE_PID=$!
+
+				while [ $(wc -c "$BPFTRACE_OUT" | awk '{print $1}') -eq 0 ];
+				do
+					sleep 1
+				done
+
+				echo "Running execute requests"
+
+				./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE $TRACE $OPT_PATH >> $RESULTS_FILENAME
+				EXECUTION_SUCCESS=0
+
+				kill $PROBE_PID
+
+				python -u $TRACER_DIR/execve-clone-parser-bpftrace.py $i "execute" "java" < $BPFTRACE_OUT >> $RESULTS_FILENAME
 			fi
-		elif [ "$TYPE_DIR" == "std-server-handler" ]
+		elif [ $TYPE_DIR == "std-server-handler" ]
 		then
 			echo "STD Handler of Type [$HANDLER_TYPE]"
 			set +e
