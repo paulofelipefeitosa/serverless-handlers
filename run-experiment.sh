@@ -121,11 +121,11 @@ do
 			else
 				echo "HTTP Server Handler"
 
-				BCC_TOOL_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-BCCTOOL.out
-				python -u $TRACER_DIR/clone-exec-dtpp.py -ne java -nc execute > $BCC_TOOL_OUT &
-				BCC_PID=$!
+				BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-BCCTOOL.out
+				bpftrace -B 'line' $TRACER_DIR/execve-clone-probes.bt > $BPFTRACE_OUT &
+				PROBE_PID=$!
 
-				while [ $(wc -c "$BCC_TOOL_OUT" | awk '{print $1}') -eq 0 ];
+				while [ $(wc -c "$BPFTRACE_OUT" | awk '{print $1}') -eq 0 ];
 				do
 					sleep 1
 				done
@@ -135,9 +135,9 @@ do
 				./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE $TRACE $OPT_PATH >> $RESULTS_FILENAME
 				EXECUTION_SUCCESS=0
 
-				kill $BCC_PID
+				kill $PROBE_PID
 
-				python -u $TRACER_DIR/execve-clone-parser.py $i < $BCC_TOOL_OUT >> $RESULTS_FILENAME
+				python -u $TRACER_DIR/execve-clone-parser-bpftrace.py $i $EXP_APP_NAME "java" < $BPFTRACE_OUT >> $RESULTS_FILENAME
 			fi
 		elif [ $TYPE_DIR == "std-server-handler" ]
 		then
