@@ -137,7 +137,7 @@ do
 
 				kill $PROBE_PID
 
-				python -u $TRACER_DIR/execve-clone-parser-bpftrace.py $i $EXP_APP_NAME "java" < $BPFTRACE_OUT >> $RESULTS_FILENAME
+				python -u $TRACER_DIR/execve-clone-parser-bpftrace.py $i "execute" "java" < $BPFTRACE_OUT >> $RESULTS_FILENAME
 			fi
 		elif [ $TYPE_DIR == "std-server-handler" ]
 		then
