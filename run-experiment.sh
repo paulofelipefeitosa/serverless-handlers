@@ -108,10 +108,14 @@ parse_bpftrace() {
 	EXECID=$1
 	PROCESS_COMMAND=$2
 	BIN_NAME=$3
+	EXEC_SUCCESS=$4
 
 	killall -v bpftrace
 
-	python -u $TRACER_DIR/execve-clone-parser-bpftrace.py $EXECID $PROCESS_COMMAND $BIN_NAME < $BPFTRACE_OUT >> $RESULTS_FILENAME
+	if [ $EXEC_SUCCESS -eq 0 ];
+	then
+		python -u $TRACER_DIR/execve-clone-parser-bpftrace.py $EXECID $PROCESS_COMMAND $BIN_NAME < $BPFTRACE_OUT >> $RESULTS_FILENAME
+	fi
 }
 
 for i in $(seq "$REP_EXEC")
@@ -140,10 +144,7 @@ do
 				killall -v java
 				set -e
 
-				if [ $EXECUTION_SUCCESS -eq 0 ];
-				then
-					parse_bpftrace $i "execute" "criu"
-				fi
+				parse_bpftrace $i "execute" "criu" $EXECUTION_SUCCESS
 
 				truncate --size=0 $APP_DIR/$CRIU_APP_OUTPUT
 			else
@@ -156,7 +157,7 @@ do
 				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE $OPT_PATH >> $RESULTS_FILENAME
 				EXECUTION_SUCCESS=0
 
-				parse_bpftrace $i "execute" "java"
+				parse_bpftrace $i "execute" "java" $EXECUTION_SUCCESS
 			fi
 		elif [ $TYPE_DIR == "std-server-handler" ]
 		then
