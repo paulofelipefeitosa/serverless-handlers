@@ -42,6 +42,20 @@ func startDefaultServer(jarPath string) (*exec.Cmd, io.ReadCloser, error) {
 	return upServerCmd, serverStdout, err
 }
 
+func checkIfFileExists(filePath string) {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		fmt.Fprintln(os.Stderr, "File [%s] does not exists", filePath)
+		log.Fatal(err)
+	}
+}
+
+func checkNilOrEmpty(key string, value string) {
+	if key == nil || key == "" {
+		fmt.Fprintln(os.Stderr, "%s argument is nil or empty", value)
+		os.Exit(1) // bad args
+	}
+}
+
 func main() {
 	serverAddress := os.Args[1]
 	endpoint := os.Args[2]
@@ -52,8 +66,16 @@ func main() {
 	optPath := os.Args[7]
 
 	if err != nil {
+		fmt.Fprintln(os.Stderr, "Amount of Requests is not an integer, given value %s", os.Args[3])
 		log.Fatal(err)
 	}
+	checkNilOrEmpty(serverAddress)
+	checkNilOrEmpty(endpoint)
+	checkNilOrEmpty(executionID)
+	checkNilOrEmpty(handlerType)
+	checkIfFileExists(jarPath)
+	checkIfFileExists(optPath)
+
 	functionURL := fmt.Sprintf("http://%s%s", serverAddress, endpoint)
 
     var upServerCmd* exec.Cmd
