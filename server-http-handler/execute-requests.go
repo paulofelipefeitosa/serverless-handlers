@@ -9,6 +9,7 @@ import(
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 	_ "unsafe" // For go:linkname
 )
 
@@ -49,9 +50,9 @@ func checkIfFileExists(filePath string) {
 	}
 }
 
-func checkNilOrEmpty(key string, value string) {
-	if key == nil || key == "" {
-		fmt.Fprintln(os.Stderr, "%s argument is nil or empty", value)
+func checkEmpty(key string, value string) {
+	if strings.Trim(key, "") == "" {
+		fmt.Fprintln(os.Stderr, "%s argument is empty", value)
 		os.Exit(1) // bad args
 	}
 }
@@ -69,10 +70,10 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Amount of Requests is not an integer, given value %s", os.Args[3])
 		log.Fatal(err)
 	}
-	checkNilOrEmpty(serverAddress)
-	checkNilOrEmpty(endpoint)
-	checkNilOrEmpty(executionID)
-	checkNilOrEmpty(handlerType)
+	checkEmpty(serverAddress, "serverAddress")
+	checkEmpty(endpoint, "endpoint")
+	checkEmpty(executionID, "executionID")
+	checkEmpty(handlerType, "handlerType")
 	checkIfFileExists(jarPath)
 	checkIfFileExists(optPath)
 
