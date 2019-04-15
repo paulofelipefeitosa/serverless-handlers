@@ -140,7 +140,10 @@ do
 				killall -v java
 				set -e
 
-				parse_bpftrace $i $PROBE_PID "execute" "criu"
+				if [ $EXECUTION_SUCCESS -eq 0 ];
+				then
+					parse_bpftrace $i "execute" "criu"
+				fi
 
 				truncate --size=0 $APP_DIR/$CRIU_APP_OUTPUT
 			else
@@ -153,7 +156,7 @@ do
 				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE $OPT_PATH >> $RESULTS_FILENAME
 				EXECUTION_SUCCESS=0
 
-				parse_bpftrace $i $PROBE_PID "execute" "java"
+				parse_bpftrace $i "execute" "java"
 			fi
 		elif [ $TYPE_DIR == "std-server-handler" ]
 		then
