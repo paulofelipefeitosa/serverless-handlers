@@ -139,8 +139,9 @@ do
 				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $APP_DIR $HANDLER_TYPE $APP_DIR/$CRIU_APP_OUTPUT >> $RESULTS_FILENAME
 				EXECUTION_SUCCESS=$?
 
-				echo "Try to kill HTTP Server Handler process"
-				pgrep java
+				echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
+
+				echo "Trying to kill HTTP Server Handler process"
 				killall -v java
 				set -e
 
@@ -155,7 +156,9 @@ do
 
 				echo "Running execute requests script"
 				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE $OPT_PATH >> $RESULTS_FILENAME
-				EXECUTION_SUCCESS=0
+				EXECUTION_SUCCESS=$?
+
+				echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
 
 				parse_bpftrace $i "execute" "java" $EXECUTION_SUCCESS
 			fi
@@ -163,8 +166,12 @@ do
 		then
 			echo "STD Handler of Type [$HANDLER_TYPE]"
 			set +e
+			
 			scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $REP_REQ $JAR_PATH $i $HANDLER_TYPE >> $RESULTS_FILENAME
 			EXECUTION_SUCCESS=$?
+
+			echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
+
 			set -e
 		else
 			echo "Could not identify the experiment type [$TYPE_DIR]"
