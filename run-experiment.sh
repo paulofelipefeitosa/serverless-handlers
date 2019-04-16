@@ -92,7 +92,7 @@ echo "Number of executions [$REP_EXEC]"
 echo "Number of requests [$REP_REQ]"
 echo "Results filename [$RESULTS_FILENAME]"
 
-echo "Metric,ExecID,ReqID,Value" > $RESULTS_FILENAME
+echo "Metric,ExecID,ReqID,KernelTime_NS" > $RESULTS_FILENAME
 
 BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-BPFTRACE.out
 run_bpftrace() {
