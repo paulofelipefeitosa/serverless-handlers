@@ -8,8 +8,7 @@ REP_EXEC=$5 # integer value
 REP_REQ=$6 # integer value
 HANDLER_TYPE=$7 # criu or no-criu
 OPT_PATH=$8 # CRIU: /usr/lib/jvm/java-8-oracle
-TRACE=$9 # y or n
-TRACER_DIR=${10} # Agent Dir
+TRACER_DIR=$9 # Agent Dir
 
 APP_DIR=$TYPE_DIR/$APP_NAME
 JAR_PATH=$APP_DIR/target/$JAR_NAME
@@ -93,7 +92,31 @@ echo "Number of executions [$REP_EXEC]"
 echo "Number of requests [$REP_REQ]"
 echo "Results filename [$RESULTS_FILENAME]"
 
-echo "Metric,ExecID,ReqID,Value" > $RESULTS_FILENAME
+echo "Metric,ExecID,ReqID,KernelTime_NS" > $RESULTS_FILENAME
+
+BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-BPFTRACE.out
+run_bpftrace() {
+	bpftrace -B 'line' $TRACER_DIR/execve-clone-probes.bt > $BPFTRACE_OUT &
+
+	while [ $(wc -c "$BPFTRACE_OUT" | awk '{print $1}') -eq 0 ];
+	do
+		sleep 1
+	done
+}
+
+parse_bpftrace() {
+	EXECID=$1
+	PROCESS_COMMAND=$2
+	BIN_NAME=$3
+	EXEC_SUCCESS=$4
+
+	killall -v bpftrace
+
+	if [ $EXEC_SUCCESS -eq 0 ];
+	then
+		python -u $TRACER_DIR/execve-clone-parser-bpftrace.py $EXECID $PROCESS_COMMAND $BIN_NAME < $BPFTRACE_OUT >> $RESULTS_FILENAME
+	fi
+}
 
 for i in $(seq "$REP_EXEC")
 do
@@ -108,43 +131,47 @@ do
 				echo "HTTP Server CRIU Handler"
 				dump_criu_app
 
+				echo "Running bpftrace probes"
+				run_bpftrace
+
+				echo "Running execute requests script"
 				set +e
-				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $APP_DIR $HANDLER_TYPE $TRACE $APP_DIR/$CRIU_APP_OUTPUT >> $RESULTS_FILENAME
+				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $APP_DIR $HANDLER_TYPE $APP_DIR/$CRIU_APP_OUTPUT >> $RESULTS_FILENAME
 				EXECUTION_SUCCESS=$?
 
-				echo "Try to kill HTTP Server Handler process"
-				pgrep java
+				echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
+
+				echo "Trying to kill HTTP Server Handler process"
 				killall -v java
 				set -e
+
+				parse_bpftrace $i "execute" "criu" $EXECUTION_SUCCESS
 
 				truncate --size=0 $APP_DIR/$CRIU_APP_OUTPUT
 			else
 				echo "HTTP Server Handler"
 
-				BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-BCCTOOL.out
-				bpftrace -B 'line' $TRACER_DIR/execve-clone-probes.bt > $BPFTRACE_OUT &
-				PROBE_PID=$!
+				echo "Running bpftrace probes"
+				run_bpftrace
 
-				while [ $(wc -c "$BPFTRACE_OUT" | awk '{print $1}') -eq 0 ];
-				do
-					sleep 1
-				done
+				echo "Running execute requests script"
+				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE $OPT_PATH >> $RESULTS_FILENAME
+				EXECUTION_SUCCESS=$?
 
-				echo "Running execute requests"
+				echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
 
-				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE $TRACE $OPT_PATH >> $RESULTS_FILENAME
-				EXECUTION_SUCCESS=0
-
-				kill $PROBE_PID
-
-				python -u $TRACER_DIR/execve-clone-parser-bpftrace.py $i "execute" "java" < $BPFTRACE_OUT >> $RESULTS_FILENAME
+				parse_bpftrace $i "execute" "java" $EXECUTION_SUCCESS
 			fi
 		elif [ $TYPE_DIR == "std-server-handler" ]
 		then
 			echo "STD Handler of Type [$HANDLER_TYPE]"
 			set +e
+			
 			scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $REP_REQ $JAR_PATH $i $HANDLER_TYPE >> $RESULTS_FILENAME
 			EXECUTION_SUCCESS=$?
+
+			echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
+
 			set -e
 		else
 			echo "Could not identify the experiment type [$TYPE_DIR]"

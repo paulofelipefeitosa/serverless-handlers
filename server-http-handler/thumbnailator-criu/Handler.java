@@ -16,7 +16,7 @@ public class Handler implements IHandler {
     public IResponse Handle(IRequest req) {
         boolean isWarmRequest = req.getHeaders().containsKey(WARM_REQUEST_HEADER_KEY);
         if (!isWarmRequest) {
-            System.out.println("T4: " + System.currentTimeMillis());
+            System.out.println("T4: " + System.nanoTime());
         }
         
         List<GarbageCollectorMXBean> gcs = ManagementFactory.getGarbageCollectorMXBeans();
@@ -53,7 +53,7 @@ public class Handler implements IHandler {
         Response res = new Response();
         res.setBody(output);
         if (!isWarmRequest) {
-            System.out.println("T6: " + System.currentTimeMillis());
+            System.out.println("T6: " + System.nanoTime());
         }
         return res;
     }
