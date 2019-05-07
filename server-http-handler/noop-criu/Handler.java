@@ -1,9 +1,16 @@
 public class Handler implements IHandler {
 
+    public static final String WARM_REQUEST_HEADER_KEY = "X-warm-request";
+
     public IResponse Handle(IRequest req) {
-        System.out.println("T4: " + System.currentTimeMillis());
+        boolean isWarmRequest = req.getHeaders().containsKey(WARM_REQUEST_HEADER_KEY);
+        if (!isWarmRequest) {
+            System.out.println("T4: " + System.nanoTime());
+        }
         Response res = new Response();
-        System.out.println("T6: " + System.currentTimeMillis());
+        if (!isWarmRequest) {
+            System.out.println("T6: " + System.nanoTime());
+        }
         return res;
     }
 

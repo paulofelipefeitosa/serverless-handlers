@@ -7,16 +7,25 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
-
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
 public class App {
+
+    private static InvokeHandler invokeHandler;
+
     public static void main(String[] args) throws Exception {
-        HttpServer server = HttpServer.create(new InetSocketAddress(9000), 0);
-        server.createContext("/").setHandler(new InvokeHandler(new Handler()));
+        int port = 9000;
+
+        IHandler handler = new Handler();
+
+        InetSocketAddress addr = new InetSocketAddress(port);
+        HttpServer server = HttpServer.create(addr, 0);
+        invokeHandler = new InvokeHandler(handler);
+
+        server.createContext("/", invokeHandler);
         server.createContext("/ping").setHandler(App::handlePing);
         server.createContext("/gc").setHandler(App::handleGC);
         server.setExecutor(Executors.newSingleThreadExecutor());
@@ -34,9 +43,8 @@ public class App {
 
     private static void handlePing(HttpExchange exchange) throws IOException {
         try {
-            exchange.sendResponseHeaders(200, 0);
+            invokeHandler.handle(exchange);
         } finally {
-            exchange.close();
         }
     }
 
@@ -60,6 +68,7 @@ public class App {
                 while ((length = inputStream.read(buffer)) != -1) {
                     result.write(buffer, 0, length);
                 }
+                inputStream.close();
                 // StandardCharsets.UTF_8.name() > JDK 7
                 requestBody = result.toString("UTF-8");
             }
@@ -98,6 +107,7 @@ public class App {
             os.write(bytesOut);
             os.close();
 
+            t.close();
         }
     }
 }
