@@ -17,6 +17,7 @@ public class App {
     private static InvokeHandler invokeHandler;
 
     public static void main(String[] args) throws Exception {
+        System.out.println("Entered in main: " + System.nanoTime());
         int port = 9000;
 
         IHandler handler = new Handler();
@@ -30,6 +31,7 @@ public class App {
         server.createContext("/gc").setHandler(App::handleGC);
         server.setExecutor(Executors.newSingleThreadExecutor());
         server.start();
+        System.out.println("Exit from main: " + System.nanoTime());
     }
 
     private static void handleGC(HttpExchange exchange) throws IOException {
