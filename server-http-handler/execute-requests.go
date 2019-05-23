@@ -75,13 +75,13 @@ func main() {
 	checkEmpty(executionID, "executionID")
 	checkEmpty(handlerType, "handlerType")
 	checkIfFileExists(jarPath)
-	checkIfFileExists(optPath)
 
 	functionURL := fmt.Sprintf("http://%s%s", serverAddress, endpoint)
 
-    var upServerCmd* exec.Cmd
-    var serverStdout io.ReadCloser
+	var upServerCmd* exec.Cmd
+	var serverStdout io.ReadCloser
 	if handlerType == "criu" {
+		checkIfFileExists(optPath)
 		upServerCmd, serverStdout, err = startCRIUServer(jarPath, optPath)
 	} else {
 		upServerCmd, serverStdout, err = startDefaultServer(jarPath)

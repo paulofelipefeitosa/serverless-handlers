@@ -199,7 +199,7 @@ do
 				run_bpftrace
 
 				echo "Running execute requests script"
-				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE $OPT_PATH >> $RESULTS_FILENAME
+				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE ${PWD} >> $RESULTS_FILENAME
 				EXECUTION_SUCCESS=$?
 
 				echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
