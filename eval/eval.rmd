@@ -1,0 +1,49 @@
+---
+title: "Socc 19 eval"
+output:
+  pdf_document:
+    keep_tex: true
+---
+
+```{r rawpb_cmp}
+# Metrics:
+# RuntimeReadyTime -> time between the start of the function and until it is ready to start serving requests.
+# ExecID -> Treatment replica ID
+# ReqID -> ID of the request within the treatment replica (0 meaning the first request)
+
+require(dplyr)
+require(ggplot2)
+require(ggpubr)
+
+# Reading data
+read_startup <- function(f) {
+  df <- read.csv(f) 
+  df <- df %>% filter(Metric == "RuntimeReadyTime" & ReqID == 0) %>% select(App, Value_NS)
+  colnames(df) <- c("app", "value")
+  df$value <- df$value / 10^6 
+  df <- df %>% mutate(app = ifelse(app == "NoOp", "NOOP", "Thumbnail Maker"))
+  return(df)
+}
+
+pb <- read_startup("criu_nobpftrace_nogc_nowarmup.csv")
+pb$type <- "Prebaking"
+vanilla <- read_startup("nocriu_nobpftrace_nogc_nowarmup.csv")
+vanilla$type <- "Vanilla"
+
+# Graphing
+p <- c("yellowgreen", "violetred4")  # from viridis color pallete.
+cOff <- p[1]
+cOn <- p[2]
+ggplot(rbind(pb, vanilla), aes(type, value, color=type)) +
+  geom_boxplot() +
+  facet_wrap(~app) +
+  theme_pubclean() +
+  scale_color_manual(values=p) +
+  labs(x="Technique", y="Startup time (ms)")+
+  theme(
+    legend.position="none",
+    axis.title.x=element_blank(),
+    panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
+
+ggsave("startup_cmp_nowarmup.png")
+```
