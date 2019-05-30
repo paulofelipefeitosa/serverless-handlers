@@ -5,7 +5,7 @@ output:
     keep_tex: true
 ---
 
-```{r rawpb_cmp}
+```{r rawpb_cmp, fig.width=7, fig.height=5}
 # Metrics:
 # RuntimeReadyTime -> time between the start of the function and until it is ready to start serving requests.
 # ExecID -> Treatment replica ID
@@ -14,6 +14,7 @@ output:
 require(dplyr)
 require(ggplot2)
 require(ggpubr)
+library(boot)
 
 # Reading data
 read_startup <- function(f) {
@@ -30,12 +31,44 @@ pb$type <- "Prebaking"
 vanilla <- read_startup("nocriu_nobpftrace_nogc_nowarmup.csv")
 vanilla$type <- "Vanilla"
 
+pb_noop <- pb %>% filter(app == "NOOP")
+vanilla_noop <- vanilla %>% filter(app == "NOOP")
+pb_thumb <- pb %>% filter(app == "Thumbnail Maker")
+vanilla_thumb <- vanilla %>% filter(app == "Thumbnail Maker")
+
+shapiro.test(pb_noop$value)
+shapiro.test(vanilla_noop$value)
+wilcox.test(pb_noop$value, vanilla_noop$value)
+shapiro.test(pb_thumb$value)
+shapiro.test(vanilla_thumb$value)
+wilcox.test(pb_thumb$value, vanilla_thumb$value)
+
+# Some samples did not pass the Shapiro test, so let's calculate
+# the confidence interval using bootstrap and test using a non-parametric
+# test.
+
+# Calculate confidence intervals around the mean.
+# Inspiration: https://rpubs.com/dgolicher/median_boot
+median_cl_boot <- function(x, conf = 0.95) {
+    lconf <- (1 - conf)/2
+    uconf <- 1 - lconf
+    require(boot)
+    bmedian <- function(x, ind) median(x[ind])
+    bt <- boot(x, bmedian, 1000)
+    bb <- boot.ci(bt, type = "perc")
+    data.frame(y = median(x), ymin = quantile(bt$t, lconf), ymax = quantile(bt$t, 
+        uconf))
+}
+
 # Graphing
 p <- c("yellowgreen", "violetred4")  # from viridis color pallete.
 cOff <- p[1]
 cOn <- p[2]
 ggplot(rbind(pb, vanilla), aes(type, value, color=type)) +
-  geom_boxplot() +
+  #geom_bar(stat="identity") +
+  #geom_boxplot() +
+  geom_jitter(alpha=0.2) +
+  stat_summary(fun.data = median_cl_boot, geom = "errorbar") + 
   facet_wrap(~app) +
   theme_pubclean() +
   scale_color_manual(values=p) +
