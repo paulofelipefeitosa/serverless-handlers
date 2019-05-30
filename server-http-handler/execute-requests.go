@@ -75,13 +75,13 @@ func main() {
 	checkEmpty(executionID, "executionID")
 	checkEmpty(handlerType, "handlerType")
 	checkIfFileExists(jarPath)
-	checkIfFileExists(optPath)
 
 	functionURL := fmt.Sprintf("http://%s%s", serverAddress, endpoint)
 
-    var upServerCmd* exec.Cmd
-    var serverStdout io.ReadCloser
+	var upServerCmd* exec.Cmd
+	var serverStdout io.ReadCloser
 	if handlerType == "criu" {
+		checkIfFileExists(optPath)
 		upServerCmd, serverStdout, err = startCRIUServer(jarPath, optPath)
 	} else {
 		upServerCmd, serverStdout, err = startDefaultServer(jarPath)
@@ -96,7 +96,7 @@ func main() {
 		log.Fatal(err)
 	}
 	
-	nanoTimestamps, err := getHTTPServerReadyAndServiceTS(functionURL, serverStdout, handlerType)
+	nanoTimestamps, err := getHTTPServerReadyAndServiceTS(functionURL, serverStdout)
 	fmt.Fprintln(os.Stderr, "Got Ready Time")
 
 	if err != nil {
@@ -160,7 +160,7 @@ func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverStdou
 	return roundTripTime, serviceTime
 }
 
-func getHTTPServerReadyAndServiceTS(functionURL string, serverStdout io.ReadCloser, handlerType string) ([]int64, error) {
+func getHTTPServerReadyAndServiceTS(functionURL string, serverStdout io.ReadCloser) ([]int64, error) {
 	maxFailsToStart := int64(2000)
 	var failCount int64
 	nanoTimestamps := make([]int64, 4)
@@ -170,10 +170,8 @@ func getHTTPServerReadyAndServiceTS(functionURL string, serverStdout io.ReadClos
 			if resp.StatusCode == http.StatusOK {
 				io.Copy(ioutil.Discard, resp.Body)
 				resp.Body.Close()
-				if handlerType != "criu" {
-					fmt.Fscanf(serverStdout, "Entered in main: %d", &nanoTimestamps[0])
-					fmt.Fscanf(serverStdout, "Exit from main: %d", &nanoTimestamps[1])
-				}
+				fmt.Fscanf(serverStdout, "Entered in main: %d", &nanoTimestamps[0])
+				fmt.Fscanf(serverStdout, "Exit from main: %d", &nanoTimestamps[1])
 				fmt.Fscanf(serverStdout, "T4: %d", &nanoTimestamps[2])
 				fmt.Fscanf(serverStdout, "T6: %d", &nanoTimestamps[3])
 				return nanoTimestamps, nil

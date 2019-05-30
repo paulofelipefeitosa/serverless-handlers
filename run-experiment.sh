@@ -2,13 +2,39 @@
 set -e
 TYPE_DIR=$1 # server-http-handler or std-server-handler
 APP_NAME=$2 # APP DIR NAME
-JAR_NAME=$3 # JAR NAME
-IMAGE_URL=$4 # URL to download image
-REP_EXEC=$5 # integer value
-REP_REQ=$6 # integer value
-HANDLER_TYPE=$7 # criu or no-criu
-OPT_PATH=$8 # CRIU: /usr/lib/jvm/java-8-oracle
-TRACER_DIR=$9 # Agent Dir
+IMAGE_URL=$3 # URL to download image
+REP_EXEC=$4 # integer value
+REP_REQ=$5 # integer value
+HANDLER_TYPE=$6 # criu or no-criu
+
+for i in "$@"
+do
+	case $i in
+	    -jvm=*|--jvm_path=*) # CRIU: /usr/lib/jvm/java-8-oracle
+	    OPT_PATH="${i#*=}"
+	    shift # past argument=value
+	    ;;
+	    -t=*|--tracer_dir=*) # Agent Dir
+	    TRACER_DIR="${i#*=}"
+	    shift # past argument=value
+	    ;;
+	    -jar=*|--jar_name=*) # Jar Name to no criu executions
+	    JAR_NAME="${i#*=}"
+	    shift # past argument=value
+	    ;;
+	    -gc|--enable_gc) # Enable force GC request
+	    GC=YES
+	    shift # past argument with no value
+	    ;;
+	    -warm|--warm_req) # Enable warm request
+	    WARM_REQ=YES
+	    shift # past argument with no value
+	    ;;
+	    *)
+	          # unknown option
+	    ;;
+	esac
+done
 
 APP_DIR=$TYPE_DIR/$APP_NAME
 JAR_PATH=$APP_DIR/target/$JAR_NAME
@@ -42,11 +68,23 @@ dump_criu_app() {
 	echo "App PID [$APP_PID]"
 	ps aux | grep java
 
-	echo "Warming $APP_DIR App"
-	while [[ "$(curl --header 'X-Warm-Request: true' -s -o /dev/null -w ''%{http_code}'' http://$HTTP_SERVER_ADDRESS/ping)" != "200" ]]; 
-	    do sleep 1;
-	done
-	curl http://$HTTP_SERVER_ADDRESS/gc
+	if [ -n "$WARM_REQ" ];
+	then 
+		echo "Warming $APP_DIR App"
+		while [[ "$(curl --header 'X-Warm-Request: true' -s -o /dev/null -w ''%{http_code}'' http://$HTTP_SERVER_ADDRESS/ping)" != "200" ]]; 
+		    do sleep 1;
+		done
+	fi
+
+	if [ -n "$GC" ];
+	then
+		echo "Forcing $APP_DIR GC"
+		if [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://$HTTP_SERVER_ADDRESS/gc)" != "200" ]];
+		then
+			echo "Unable to force GC, please check your application"
+			exit 1
+		fi
+	fi
 
 	echo "Dumping $APP_DIR App"
 	criu dump -t $APP_PID -vvv -o dump.log
@@ -86,7 +124,7 @@ cd -
 echo "Starting experiment"
 
 CURRENT_TS=$(date +%s)
-RESULTS_FILENAME=$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ.csv
+RESULTS_FILENAME=$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$GC-$WARM_REQ.csv
 
 echo "Number of executions [$REP_EXEC]"
 echo "Number of requests [$REP_REQ]"
@@ -94,27 +132,35 @@ echo "Results filename [$RESULTS_FILENAME]"
 
 echo "Metric,ExecID,ReqID,KernelTime_NS" > $RESULTS_FILENAME
 
-BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-BPFTRACE.out
+BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$GC-$WARM_REQ-BPFTRACE.out
 run_bpftrace() {
-	bpftrace -B 'line' $TRACER_DIR/execve-clone-probes.bt > $BPFTRACE_OUT &
+	if [ -n "$TRACER_DIR" ];
+	then 
+		echo "Running bpftrace probes"
 
-	while [ $(wc -c "$BPFTRACE_OUT" | awk '{print $1}') -eq 0 ];
-	do
-		sleep 1
-	done
+		bpftrace -B 'line' $TRACER_DIR/execve-clone-probes.bt > $BPFTRACE_OUT &
+
+		while [ $(wc -c "$BPFTRACE_OUT" | awk '{print $1}') -eq 0 ];
+		do
+			sleep 1
+		done
+	fi
 }
 
 parse_bpftrace() {
-	EXECID=$1
-	PROCESS_COMMAND=$2
-	BIN_NAME=$3
-	EXEC_SUCCESS=$4
+	if [ -n "$TRACER_DIR" ];
+	then 
+		EXECID=$1
+		PROCESS_COMMAND=$2
+		BIN_NAME=$3
+		EXEC_SUCCESS=$4
 
-	killall -v bpftrace
+		killall -v bpftrace
 
-	if [ $EXEC_SUCCESS -eq 0 ];
-	then
-		python -u $TRACER_DIR/execve-clone-parser-bpftrace.py $EXECID $PROCESS_COMMAND $BIN_NAME < $BPFTRACE_OUT >> $RESULTS_FILENAME
+		if [ $EXEC_SUCCESS -eq 0 ];
+		then
+			python -u $TRACER_DIR/execve-clone-parser-bpftrace.py $EXECID $PROCESS_COMMAND $BIN_NAME < $BPFTRACE_OUT >> $RESULTS_FILENAME
+		fi
 	fi
 }
 
@@ -131,7 +177,6 @@ do
 				echo "HTTP Server CRIU Handler"
 				dump_criu_app
 
-				echo "Running bpftrace probes"
 				run_bpftrace
 
 				echo "Running execute requests script"
@@ -151,11 +196,10 @@ do
 			else
 				echo "HTTP Server Handler"
 
-				echo "Running bpftrace probes"
 				run_bpftrace
 
 				echo "Running execute requests script"
-				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE $OPT_PATH >> $RESULTS_FILENAME
+				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE ${PWD} >> $RESULTS_FILENAME
 				EXECUTION_SUCCESS=$?
 
 				echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
