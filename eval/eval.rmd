@@ -38,10 +38,10 @@ vanilla_thumb <- vanilla %>% filter(app == "Thumbnail Maker")
 
 shapiro.test(pb_noop$value)
 shapiro.test(vanilla_noop$value)
-wilcox.test(pb_noop$value, vanilla_noop$value)
+wilcox.test(vanilla_noop$value, pb_noop$value, conf.int = T)
 shapiro.test(pb_thumb$value)
 shapiro.test(vanilla_thumb$value)
-wilcox.test(pb_thumb$value, vanilla_thumb$value)
+wilcox.test(vanilla_thumb$value, pb_thumb$value, conf.int = T)
 
 # Some samples did not pass the Shapiro test, so let's calculate
 # the confidence interval using bootstrap and test using a non-parametric
@@ -60,18 +60,29 @@ median_cl_boot <- function(x, conf = 0.95) {
         uconf))
 }
 
+median_ci_text <- function(x, conf = 0.95) {
+    lconf <- (1 - conf)/2
+    uconf <- 1 - lconf
+    require(boot)
+    bmedian <- function(x, ind) median(x[ind])
+    bt <- boot(x, bmedian, 1000)
+    bb <- boot.ci(bt, type = "perc")
+    data.frame(y = max(x) + 12,
+               label = paste('Median=[', signif(quantile(bt$t, lconf), 2), ', ', signif(quantile(bt$t, uconf), 2),']', sep=""))
+}
+
 # Graphing
 p <- c("yellowgreen", "violetred4")  # from viridis color pallete.
 cOff <- p[1]
 cOn <- p[2]
 ggplot(rbind(pb, vanilla), aes(type, value, color=type)) +
-  #geom_bar(stat="identity") +
-  #geom_boxplot() +
-  geom_jitter(alpha=0.2) +
-  stat_summary(fun.data = median_cl_boot, geom = "errorbar") + 
+  geom_jitter(alpha=0.1) +
+  stat_summary(fun.data = median_cl_boot, geom = "errorbar") +
+  stat_summary(fun.data = median_ci_text, geom = "text", size=3.5)  +
   facet_wrap(~app) +
   theme_pubclean() +
   scale_color_manual(values=p) +
+  scale_y_continuous(limits = c(0, max(vanilla$value)+20), breaks = seq(0, max(vanilla$value), by = 50)) +
   labs(x="Technique", y="Startup time (ms)")+
   theme(
     legend.position="none",
