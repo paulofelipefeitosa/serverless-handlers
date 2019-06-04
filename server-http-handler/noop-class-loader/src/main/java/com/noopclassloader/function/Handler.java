@@ -10,7 +10,13 @@ public class Handler implements com.noopclassloader.model.IHandler {
     private EagerClassLoader classLoader;
 
     public Handler(String jarFilePath) {
-        this.classLoader = new EagerClassLoader(jarFilePath);
+        try {
+            this.classLoader = new EagerClassLoader(jarFilePath);
+        } catch (IOException e) {
+            System.err.println("Cannot create EagerClassLoader");
+            System.err.println(e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     public IResponse Handle(IRequest req) {
