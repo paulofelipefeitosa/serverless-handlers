@@ -149,11 +149,11 @@ noop_v_perc <- calc_perc(vanilla, "NOOP")
 noop_v_perc$app = "NOOP"
 noop_v_perc$type = "Vanilla"
 
-tm_pb_perc <- calc_perc(pb, "NOOP")
+tm_pb_perc <- calc_perc(pb, "Thumbnail Maker")
 tm_pb_perc$app = "Thumbnail Maker"
 tm_pb_perc$type = "Prebaking"
 
-tm_v_perc <- calc_perc(vanilla, "NOOP")
+tm_v_perc <- calc_perc(vanilla, "Thumbnail Maker")
 tm_v_perc$app = "Thumbnail Maker"
 tm_v_perc$type = "Vanilla"
 
@@ -162,13 +162,16 @@ cOff <- p[1]
 cOn <- p[2]
 ggplot(rbind(noop_pb_perc, noop_v_perc, tm_pb_perc, tm_v_perc), aes(fill=type, y=perc, x=metric)) +
   facet_wrap(~app) +
-  geom_col(position=position_dodge2(), color = "black", size=0.2) +
-  geom_text(aes(label=paste(perc, "%", sep=""), y=perc+10), position = position_dodge(width=1), size=2.5)+
+  geom_col(position=position_dodge2(), color = "black", size=0.2, alpha=0.9) +
+  geom_text(aes(label=paste(perc, "%", sep=""), y=perc+2), position = position_dodge(width=1), size=3, hjust = 0)+
   labs(x="Startup Component", y="Percentage of the Startup Time (%)", fill="Technique:")+
   scale_fill_manual(values=p) +
   scale_x_discrete(limits=c("App Init.","RT Startup", "Exec", "Clone")) +
+  scale_y_continuous(limits=c(0,110), breaks = seq(0, 110, 20)) +
   coord_flip() +
   theme_pubclean() +
   theme(
     panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
+
+ggsave("startup_components.png")
 ```
