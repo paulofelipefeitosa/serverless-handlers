@@ -111,11 +111,11 @@ read_startup_bpfstrace <- function(f) {
 
   SAMPLE_SIZE <- 200
   ct <- df %>% filter(metric == "CloneTime") %>% select(app, metric, value) %>% sample_n(SAMPLE_SIZE)
-  ct$metric <- "Clone"
+  ct$metric <- "CLONE"
   et <- df %>% filter(metric == "ExecTime") %>% select(app, metric, value) %>% sample_n(SAMPLE_SIZE)
-  et$metric <- "Exec"
+  et$metric <- "EXEC"
   it <- df %>% filter(metric == "InitializationTime") %>% select(app, metric, value) %>% sample_n(SAMPLE_SIZE)
-  it$metric <- "App Init."
+  it$metric <- "APPINIT"
   rt <- df %>% filter(metric == "RuntimeTime")
   if (NROW(rt) > 0) {
     rt <- rt %>% select(app, metric, value) %>% sample_n(SAMPLE_SIZE)
@@ -126,7 +126,7 @@ read_startup_bpfstrace <- function(f) {
     data.frame("app"=replicate(SAMPLE_SIZE, "NOOP"), "value"=replicate(SAMPLE_SIZE, 0), "metric"=replicate(SAMPLE_SIZE, "0")),
     data.frame("app"=replicate(SAMPLE_SIZE, "Thumbnail Maker"), "value"=replicate(SAMPLE_SIZE, 0), "metric"=replicate(SAMPLE_SIZE, "0")))
   }
-  rt$metric <- "RT Startup"
+  rt$metric <- "RTS"
   return(rbind(ct, et, rt, it))
 }
 
@@ -166,7 +166,7 @@ ggplot(rbind(noop_pb_perc, noop_v_perc, tm_pb_perc, tm_v_perc), aes(fill=type, y
   geom_text(aes(label=paste(perc, "%", sep=""), y=perc+2), position = position_dodge(width=1), size=3, hjust = 0)+
   labs(x="Startup Component", y="Percentage of the Startup Time (%)", fill="Technique:")+
   scale_fill_manual(values=p) +
-  scale_x_discrete(limits=c("App Init.","RT Startup", "Exec", "Clone")) +
+  scale_x_discrete(limits=c("APPINIT","RTS", "EXEC", "CLONE")) +
   scale_y_continuous(limits=c(0,110), breaks = seq(0, 110, 20)) +
   coord_flip() +
   theme_pubclean() +
