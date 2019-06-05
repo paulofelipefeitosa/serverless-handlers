@@ -7,29 +7,38 @@ import com.noopclassloader.model.Response;
 
 public class Handler implements com.noopclassloader.model.IHandler {
 
-    private EagerClassLoader classLoader;
+    public static final String WARM_REQUEST_HEADER_KEY = "X-warm-request";
 
-    public Handler(String jarFilePath) {
-        try {
-            this.classLoader = new EagerClassLoader(jarFilePath);
-        } catch (IOException e) {
-            System.err.println("Cannot create EagerClassLoader");
-            System.err.println(e.getMessage());
-            e.printStackTrace();
-        }
+    private EagerClassLoader classLoader;
+    private int reqs = 0;
+
+    public Handler(String jarFilePath) throws IOException {
+        this.classLoader = new EagerClassLoader(jarFilePath);
     }
 
     public IResponse Handle(IRequest req) {
-        System.out.println("T4: " + System.nanoTime());
-        Response res = new Response();
-        try {
-            this.classLoader.loadJarClasses();
-        } catch (Throwable e) {
-            res.setStatusCode(500);
-            res.setBody(e.toString());
-            e.printStackTrace();
+        boolean isWarmReq = req.getHeaders().containsKey(WARM_REQUEST_HEADER_KEY);
+        if (!isWarmReq) {
+            System.out.println("T4: " + System.nanoTime());
         }
-        System.out.println("T6: " + System.nanoTime());
+        Response res = new Response();
+        String loadStats = "";
+        if (this.reqs == 0) {
+            try {
+                loadStats = this.classLoader.loadJarClasses();
+            } catch (Throwable e) {
+                res.setStatusCode(500);
+                res.setBody(e.toString());
+                e.printStackTrace();
+            }
+        }
+        if (!isWarmReq) {
+            System.out.println("T6: " + System.nanoTime());
+            if (this.reqs == 0) {
+                System.out.println(loadStats);
+            }
+        }
+        this.reqs++;
         return res;
     }
 
