@@ -3,10 +3,8 @@ package com.noopclassloader.function;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -16,14 +14,12 @@ public class EagerClassLoader extends ClassLoader {
     private final int bufferSize = 5000;
     byte[] buffer = new byte[this.bufferSize];
     private Map<String, Class<?>> mapClass;
-    private Set<Long> threads;
     private Map<String, LoadStats> stats;
 
     public EagerClassLoader(String jarFilePath) throws IOException {
         this.jarFile = new JarFile(jarFilePath);
-        this.mapClass = new ConcurrentHashMap<String, Class<?>>();
-        this.stats = new ConcurrentHashMap<String, LoadStats>();
-        this.threads = new ConcurrentSkipListSet<Long>();
+        this.mapClass = new HashMap<String, Class<?>>();
+        this.stats = new HashMap<String, LoadStats>();
     }
 
     public String loadJarClasses() throws IOException {
@@ -31,7 +27,6 @@ public class EagerClassLoader extends ClassLoader {
         try {
             this.jarFile
                 .stream()
-//                .parallel()
                 .filter(e -> (!e.isDirectory()
                             && e.getName().startsWith("generated")
                             && e.getName().endsWith(".class")))
@@ -49,7 +44,6 @@ public class EagerClassLoader extends ClassLoader {
             return "Total Load Time: " + (System.nanoTime() - startTime) + System.lineSeparator()
                     + this.stats.values().stream()
                             .reduce(new LoadStats(0L, 0L, 0L), (a, e) -> a.add(e)).toString()
-                    + System.lineSeparator() + "Running Threads: " + this.threads.size()
                     + System.lineSeparator() + "Loaded Classes: " + this.mapClass.size();
         } finally {
             this.jarFile.close();
@@ -58,7 +52,6 @@ public class EagerClassLoader extends ClassLoader {
 
     @Override
     protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
-        this.threads.add(Thread.currentThread().getId());
         Class<?> c = this.mapClass.get(name);
         if (c != null) {
             return c;
@@ -66,20 +59,18 @@ public class EagerClassLoader extends ClassLoader {
         JarEntry entry = this.jarFile.getJarEntry(name.replaceAll("\\.", "/") + ".class");
         if (entry != null) {
             try (InputStream is = this.jarFile.getInputStream(entry)) {
-                long startReader = System.nanoTime();
-
+                long sr = System.nanoTime();
                 byte[] byteArr = toByteArray(is);
                 c = defineClass(name, byteArr, 0, byteArr.length);
 
-                long startInterpreter = System.nanoTime();
+                long si = System.nanoTime();
                 try {
                     c.newInstance();
                 } catch (Throwable e) {
                 }
                 long end = System.nanoTime();
 
-                this.stats.put(name, new LoadStats(startInterpreter - startReader,
-                        end - startInterpreter, byteArr.length));
+                this.stats.put(name, new LoadStats(si - sr, end - si, byteArr.length));
 
                 this.mapClass.put(name, c);
                 return c;
