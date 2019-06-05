@@ -20,8 +20,8 @@ public class LoadStats {
 
     @Override
     public String toString() {
-        return "LoadStats [readTime=" + readTime + ", compTime=" + compTime + ", size=" + size
-                + "]";
+        return "ReadTime: " + readTime + System.lineSeparator() + "CompTime: " + compTime
+                + System.lineSeparator() + "TotSize: " + size;
     }
 
 }
