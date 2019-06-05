@@ -44,7 +44,7 @@ public class EagerClassLoader extends ClassLoader {
             return "Total Load Time: " + (System.nanoTime() - startTime) + System.lineSeparator()
                     + this.stats.values().stream()
                             .reduce(new LoadStats(0L, 0L, 0L), (a, e) -> a.add(e)).toString()
-                    + System.lineSeparator() + "Loaded Classes: " + this.mapClass.size();
+                    + System.lineSeparator() + "Loaded Classes: " + this.stats.size();
         } finally {
             this.jarFile.close();
         }
@@ -62,23 +62,31 @@ public class EagerClassLoader extends ClassLoader {
                 long sr = System.nanoTime();
                 byte[] byteArr = toByteArray(is);
                 c = defineClass(name, byteArr, 0, byteArr.length);
-
-                long si = System.nanoTime();
+                
+                long si = System.nanoTime(), end = 0L;
                 try {
-                    c.newInstance();
+                    if (name.startsWith("generated")) {
+                        c.newInstance();
+                        end = System.nanoTime();
+                    } else {
+                        end = System.nanoTime();
+                    }
                 } catch (Throwable e) {
+                    e.printStackTrace();
                 }
-                long end = System.nanoTime();
 
                 this.stats.put(name, new LoadStats(si - sr, end - si, byteArr.length));
-
+                
                 this.mapClass.put(name, c);
                 return c;
             } catch (IOException e) {
                 throw new ClassNotFoundException(e.toString());
             }
         } else {
+            long sr = System.nanoTime();
             c = getClass().getClassLoader().loadClass(name);
+            long end = System.nanoTime();
+            this.stats.put(name, new LoadStats(0, end - sr, 0));
             return c;
         }
     }
