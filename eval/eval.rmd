@@ -91,3 +91,129 @@ ggplot(rbind(pb, vanilla), aes(type, value, color=type)) +
 
 ggsave("startup_cmp_nowarmup.png")
 ```
+
+```{r bpfstrace_cmp, fig.width=7, fig.height=5}
+# Metrics:
+# InitializationTime -> time between the exec of the function and until it is ready to start serving requests.
+# ExecID -> Treatment replica ID
+# ReqID -> ID of the request within the treatment replica (0 meaning the first request)
+require(dplyr)
+require(ggplot2)
+require(ggpubr)
+
+
+read_startup_bpfstrace <- function(f) {
+  df <- read.csv(f) 
+  df <- df %>% filter(ReqID == 0) %>% select(App, Metric, Value_NS)
+  colnames(df) <- c("app", "metric", "value")
+  df$value <- df$value / 10^6
+  df <- df %>% mutate(app = ifelse(app == "NoOp", "NOOP", "Thumbnail Maker"))
+
+  SAMPLE_SIZE <- 200
+  ct <- df %>% filter(metric == "CloneTime") %>% select(app, metric, value) %>% sample_n(SAMPLE_SIZE)
+  ct$metric <- "CLONE"
+  et <- df %>% filter(metric == "ExecTime") %>% select(app, metric, value) %>% sample_n(SAMPLE_SIZE)
+  et$metric <- "EXEC"
+  it <- df %>% filter(metric == "InitializationTime") %>% select(app, metric, value) %>% sample_n(SAMPLE_SIZE)
+  it$metric <- "APPINIT"
+  rt <- df %>% filter(metric == "RuntimeTime")
+  if (NROW(rt) > 0) {
+    rt <- rt %>% select(app, metric, value) %>% sample_n(SAMPLE_SIZE)
+  } else {
+    # The prebaking output CSV has no RuntimeTime entries. It should be 0.
+    # Ensuring that all dfs have the same size.  
+    rt <- rbind(
+    data.frame("app"=replicate(SAMPLE_SIZE, "NOOP"), "value"=replicate(SAMPLE_SIZE, 0), "metric"=replicate(SAMPLE_SIZE, "0")),
+    data.frame("app"=replicate(SAMPLE_SIZE, "Thumbnail Maker"), "value"=replicate(SAMPLE_SIZE, 0), "metric"=replicate(SAMPLE_SIZE, "0")))
+  }
+  rt$metric <- "RTS"
+  return(rbind(ct, et, rt, it))
+}
+
+pb <- read_startup_bpfstrace("criu_bpftrace_nogc_nowarmup.csv")
+vanilla <- read_startup_bpfstrace("nocriu_bpftrace_nogc_nowarmup.csv")
+
+calc_perc <- function(df, appName){
+  df %>%
+    filter(app==appName) %>%
+    group_by(metric) %>%
+    summarise(sum=sum(value)) %>%
+    mutate(perc=signif((sum/sum(sum))*100, digits=3))
+}
+
+noop_pb_perc <- calc_perc(pb, "NOOP")
+noop_pb_perc$app = "NOOP"
+noop_pb_perc$type = "Prebaking"
+
+noop_v_perc <- calc_perc(vanilla, "NOOP")
+noop_v_perc$app = "NOOP"
+noop_v_perc$type = "Vanilla"
+
+tm_pb_perc <- calc_perc(pb, "Thumbnail Maker")
+tm_pb_perc$app = "Thumbnail Maker"
+tm_pb_perc$type = "Prebaking"
+
+tm_v_perc <- calc_perc(vanilla, "Thumbnail Maker")
+tm_v_perc$app = "Thumbnail Maker"
+tm_v_perc$type = "Vanilla"
+
+p <- c("yellowgreen", "violetred4")  # from viridis color pallete.
+cOff <- p[1]
+cOn <- p[2]
+ggplot(rbind(noop_pb_perc, noop_v_perc, tm_pb_perc, tm_v_perc), aes(fill=type, y=perc, x=metric)) +
+  facet_wrap(~app) +
+  geom_col(position=position_dodge2(), color = "black", size=0.2, alpha=0.9) +
+  geom_text(aes(label=paste(perc, "%", sep=""), y=perc+2), position = position_dodge(width=1), size=3, hjust = 0)+
+  labs(x="Startup Component", y="Percentage of the Startup Time (%)", fill="Technique:")+
+  scale_fill_manual(values=p) +
+  scale_x_discrete(limits=c("APPINIT","RTS", "EXEC", "CLONE")) +
+  scale_y_continuous(limits=c(0,110), breaks = seq(0, 110, 20)) +
+  coord_flip() +
+  theme_pubclean() +
+  theme(
+    panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
+
+ggsave("startup_components.png")
+```
+
+```{r service_time_cmp, fig.width=7, fig.height=5}
+# Metrics:
+# RuntimeReadyTime -> time between the start of the function and until it is ready to start serving requests.
+# ExecID -> Treatment replica ID
+# ReqID -> ID of the request within the treatment replica (0 meaning the first request)
+
+require(dplyr)
+require(ggplot2)
+require(ggpubr)
+library(boot)
+
+# Reading data
+read_service_time <- function(f) {
+  df <- read.csv(f) 
+  df <- df %>% filter(Metric == "ServiceTime" & ReqID != 0) %>% select(App, Value_NS)
+  colnames(df) <- c("app", "value")
+  df$value <- df$value / 10^6 
+  df <- df %>% mutate(app = ifelse(app == "NoOp", "NOOP", "Thumbnail Maker"))
+  return(df)
+}
+
+pb <- read_service_time("criu_nobpftrace_nogc_nowarmup.csv")
+pb$type <- "Prebaking"
+vanilla <- read_service_time("nocriu_nobpftrace_nogc_nowarmup.csv")
+vanilla$type <- "Vanilla"
+
+p <- c("yellowgreen", "violetred4")
+cOff <- p[1]
+cOn <- p[2]
+ggplot(rbind(pb, vanilla), aes(value, linetype=type, color=type)) +
+  facet_wrap(~app, scales="free") +
+  stat_ecdf(size=1.5) +
+  theme_pubclean() +
+  scale_color_manual(values=p) +
+  labs(y = "ECDF", x="Tempo de Serviço (ms)", linetype="Técnica", color="Técnica") +
+  theme(
+    legend.position="bottom",
+    panel.grid.major.x = element_line(colour = "darkgray", linetype = 3))
+
+ggsave("service_time.png")
+```
