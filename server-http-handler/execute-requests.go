@@ -125,6 +125,7 @@ func main() {
 	fmt.Printf("%s,%s,%d,%d\n", "Ready2Serve", executionID, 0, reqStatsNS[2])
 	fmt.Printf("%s,%s,%d,%d\n", "RuntimeReadyTime", executionID, 0, reqStatsNS[2] - startHTTPServerNanoTS)
 	fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, 0, reqStatsNS[3] - reqStatsNS[2])
+	fmt.Printf("%s,%s,%d,%d\n", "LatencyTime", executionID, 0, reqStatsNS[3] - startHTTPServerNanoTS)
 	if classLoadStats {
 		fmt.Printf("%s,%s,%d,%d\n", "LoadedClasses", executionID, 0, reqStatsNS[6])
 		fmt.Printf("%s,%s,%d,%d\n", "FindingClassesTime", executionID, 0, reqStatsNS[4])
@@ -133,7 +134,7 @@ func main() {
 		fmt.Printf("%s,%s,%d,%d\n", "LoadingClassesOverheadTime", executionID, 0, reqStatsNS[7] - reqStatsNS[4] - reqStatsNS[5])
 	}
 	for i := 1; i <= len(roundTripTime); i++ {
-		fmt.Printf("%s,%s,%d,%d\n", "RoundTripTime", executionID, i, roundTripTime[i - 1])
+		fmt.Printf("%s,%s,%d,%d\n", "LatencyTime", executionID, i, roundTripTime[i - 1])
 		fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, i, serviceTime[i - 1])
 	}
 
