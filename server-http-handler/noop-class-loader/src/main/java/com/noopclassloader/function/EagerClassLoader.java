@@ -16,7 +16,7 @@ public class EagerClassLoader extends ClassLoader {
         this.jarFile = new JarFile(jarFilePath);
     }
 
-    public String loadJarClasses() throws IOException {
+    public String loadJarClasses() throws Exception {
         long startTime = System.nanoTime();
         try {
             ClassLoader cLoader = getClass().getClassLoader();
@@ -27,23 +27,16 @@ public class EagerClassLoader extends ClassLoader {
                         && e.getName().endsWith(".class")) {
 
                     String className = e.getName().replaceAll("\\.class", "").replaceAll("/", ".");
-                    try {
-                        long sr = System.nanoTime();
-                        Class<?> c = cLoader.loadClass(className);
-                        long si = System.nanoTime();
-                        try {
-                            c.getConstructor().newInstance();
-                        } catch (Throwable ee) {
-                            ee.printStackTrace();
-                        }
-                        long end = System.nanoTime();
+                    
+                    long sr = System.nanoTime();
+                    Class<?> c = cLoader.loadClass(className);
+                    long si = System.nanoTime();
+                    c.getConstructor().newInstance();
+                    long end = System.nanoTime();
 
-                        this.rt += si - sr;
-                        this.ct += end - si;
-                        this.counter++;
-                    } catch (ClassNotFoundException e1) {
-                        e1.printStackTrace();
-                    }
+                    this.rt += si - sr;
+                    this.ct += end - si;
+                    this.counter++;
                 }
             }
             return "Loading Classes Time: " + this.rt + System.lineSeparator()
