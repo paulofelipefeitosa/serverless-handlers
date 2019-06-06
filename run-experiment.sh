@@ -26,6 +26,10 @@ do
 	    GC=YES
 	    shift # past argument with no value
 	    ;;
+	    -sfjar=*|--sf_jar_name=*) # Synthetic Function Jar Path
+	    SF_JAR_NAME="${i#*=}"
+	    shift # past argument=value
+	    ;;
 	    -warm|--warm_req) # Enable warm request
 	    WARM_REQ=YES
 	    shift # past argument with no value
@@ -38,6 +42,7 @@ done
 
 APP_DIR=$TYPE_DIR/$APP_NAME
 JAR_PATH=$APP_DIR/target/$JAR_NAME
+SF_JAR_PATH=$APP_DIR/target/$SF_JAR_NAME
 
 HTTP_SERVER_ADDRESS=localhost:9000
 CRIU_APP_OUTPUT=app.log
@@ -124,7 +129,7 @@ cd -
 echo "Starting experiment"
 
 CURRENT_TS=$(date +%s)
-RESULTS_FILENAME=$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$GC-$WARM_REQ.csv
+RESULTS_FILENAME=$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$GC-$WARM_REQ-$SF_JAR_NAME.csv
 
 echo "Number of executions [$REP_EXEC]"
 echo "Number of requests [$REP_REQ]"
@@ -132,7 +137,7 @@ echo "Results filename [$RESULTS_FILENAME]"
 
 echo "Metric,ExecID,ReqID,KernelTime_NS" > $RESULTS_FILENAME
 
-BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$GC-$WARM_REQ-BPFTRACE.out
+BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$GC-$WARM_REQ-$SF_JAR_NAME-BPFTRACE.out
 run_bpftrace() {
 	if [ -n "$TRACER_DIR" ];
 	then 
@@ -199,7 +204,7 @@ do
 				run_bpftrace
 
 				echo "Running execute requests script"
-				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE ${PWD} >> $RESULTS_FILENAME
+				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE $SF_JAR_PATH >> $RESULTS_FILENAME
 				EXECUTION_SUCCESS=$?
 
 				echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"

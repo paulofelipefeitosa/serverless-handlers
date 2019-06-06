@@ -39,10 +39,10 @@ public class EagerClassLoader extends ClassLoader {
                     this.counter++;
                 }
             }
-            return "Loading Classes Time: " + this.rt + System.lineSeparator()
-                    + "Interpreting Classes Time: " + this.ct + System.lineSeparator()
-                    + "Loaded Classes: " + this.counter + System.lineSeparator()
-                    + "Total Load Time: " + (System.nanoTime() - startTime);
+            return "LCTime: " + this.rt + System.lineSeparator()
+                    + "ICTime: " + this.ct + System.lineSeparator()
+                    + "LC: " + this.counter + System.lineSeparator()
+                    + "TLTime: " + (System.nanoTime() - startTime);
         } finally {
             this.jarFile.close();
         }
