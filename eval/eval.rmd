@@ -185,12 +185,11 @@ ggsave("startup_components.png")
 require(dplyr)
 require(ggplot2)
 require(ggpubr)
-library(boot)
 
 # Reading data
 read_service_time <- function(f) {
   df <- read.csv(f) 
-  df <- df %>% filter(Metric == "ServiceTime" & ReqID != 0) %>% select(App, Value_NS)
+  df <- df %>% filter(Metric == "ServiceTime") %>% select(App, Value_NS)
   colnames(df) <- c("app", "value")
   df$value <- df$value / 10^6 
   df <- df %>% mutate(app = ifelse(app == "NoOp", "NOOP", "Thumbnail Maker"))
@@ -201,6 +200,11 @@ pb <- read_service_time("criu_nobpftrace_nogc_nowarmup.csv")
 pb$type <- "Prebaking"
 vanilla <- read_service_time("nocriu_nobpftrace_nogc_nowarmup.csv")
 vanilla$type <- "Vanilla"
+
+pb_noop <- pb %>% filter(app == "NOOP")
+vanilla_noop <- vanilla %>% filter(app == "NOOP")
+pb_thumb <- pb %>% filter(app == "Thumbnail Maker")
+vanilla_thumb <- vanilla %>% filter(app == "Thumbnail Maker")
 
 p <- c("yellowgreen", "violetred4")
 cOff <- p[1]
@@ -214,6 +218,55 @@ ggplot(rbind(pb, vanilla), aes(value, linetype=type, color=type)) +
   theme(
     legend.position="bottom",
     panel.grid.major.x = element_line(colour = "darkgray", linetype = 3))
-
 ggsave("service_time.png")
+
+```
+
+```{r}
+# Ambos os csv's (Criu e NoCriu) possuem as seguintes métricas:
+# MainEntry -- Timestamp em nanosegundos do momento em que a app entrou no código Main.
+# MainExit -- Timestamp em nanosegundos do momento em que a app saiu do código Main.
+# Read2Serve -- Timestamp em nanosegundos do momento em que a função da app começou a atender a requisição.
+# RuntimeReadyTime -- Tempo em nanosegundos que levou para a função da app começar a atender a requisição.
+# ServiceTime -- Tempo em nanosegundos que levou para a função da app começar a servir/computar a requisição.
+# LatencyTime -- Tempo em nanosegundos que levou para a app responder a requisição.
+
+# Porém, a execução sem criu (NoCriu) possui as seguintes métricas adicionais:
+
+# LoadedClasses -- Quantidade de classes carregadas na função da app no momento da requisição
+# FindingClassesTime -- Tempo em nanosegundos que a função da app passou apenas encontrando as classes, ou seja, o tempo de lê os dados do arquivo .class e criar o objeto Class<?>.
+# CompilingClassesTime -- Tempo em nanosegundos que a função da app passou apenas criando as instâncias das classes pelo construtor de default (é sempre garantido que ele existe!).
+# LoadClassesTotalTime -- Tempo em nanosegundos que a função da app passou lendo as entradas do jar da função sintética (o nome dos arquivos .class da função sintética gerada), carregando e compilando todas as classes.
+# LoadingClassesOverheadTime -- Tempo em nanosegundos que durante o carregamento das classes a função da app não estava encontrando ou compilando classes, podemos interpretar como (LoadClassesTotalTime - FindingClassesTime - CompilingClassesTime).
+
+require(dplyr)
+require(ggplot2)
+require(reshape)
+
+read_service_time <- function(f) {
+  df <- read.csv(f) 
+  df <- data.frame(
+    Complexity=df[df$Metric=="ServiceTime", ]$Loaded_Classes,
+    Value=df[df$Metric=="ServiceTime", ]$KernelTime_NS+df[df$Metric=="RuntimeReadyTime", ]$KernelTime_NS)
+  colnames(df) <- c("app", "value")
+  df$value <- df$value / 10^6 
+  df <- df %>% mutate(app = ifelse(app == "50", "Low", ifelse(app == 250, "Medium", "High")))
+  return(df)
+}
+pb <- read_service_time("criu-nobpftrace-gc-warmup-noop-class-loader.csv")
+pb$type <- "Prebaking"
+vanilla <- read_service_time("nocriu-nobpftrace-nogc-nowarmup-noop-class-loader.csv")
+vanilla$type <- "Vanilla"
+
+
+p <- c("yellowgreen", "violetred4")
+ggplot(data.frame(value=vanilla$value/pb$value, app=pb$app), aes(x=app, value)) +
+  geom_bar(position="dodge", stat = "identity") +
+  theme_pubclean() +
+  scale_color_manual(values=p) +
+  labs(y = "Improvement (times)", x="Complexity") +
+  scale_x_discrete(limits=c("Low", "Medium", "High")) +
+  theme(
+    legend.position="bottom",
+    panel.grid.major.x = element_line(colour = "darkgray", linetype = 3))
 ```
