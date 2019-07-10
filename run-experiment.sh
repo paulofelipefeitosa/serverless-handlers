@@ -27,7 +27,7 @@ do
 	    shift # past argument with no value
 	    ;;
 	    -sfjar=*|--sf_jar_name=*) # Synthetic Function Jar Path
-	    SF_JAR_NAME="${i#*=}"
+	    SF_JAR_PATH="${i#*=}"
 	    shift # past argument=value
 	    ;;
 	    -warm|--warm_req) # Enable warm request
@@ -42,7 +42,7 @@ done
 
 APP_DIR=$TYPE_DIR/$APP_NAME
 JAR_PATH=$APP_DIR/target/$JAR_NAME
-SF_JAR_PATH=target/$SF_JAR_NAME
+SF_JAR_NAME=$(basename $SF_JAR_PATH)
 
 HTTP_SERVER_ADDRESS=localhost:9000
 CRIU_APP_OUTPUT=app.log
