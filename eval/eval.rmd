@@ -174,6 +174,24 @@ ggplot(rbind(noop_pb_perc, noop_v_perc, tm_pb_perc, tm_v_perc), aes(fill=type, y
     panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
 
 ggsave("startup_components.png")
+
+
+calc_absolute <- function(df, appName, m){
+  aux <- df %>%
+    filter(app==appName & metric==m) %>%
+    group_by(metric) %>%
+    summarise(value=mean(value))
+  aux$value
+}
+
+sprintf("Impact of the function complexity in prebaking: %f", calc_absolute(pb, "Thumbnail Maker", "APPINIT")/calc_absolute(pb, "NOOP", "APPINIT"))
+
+sprintf("Impact of the function complexity in vanilla: %f", calc_absolute(vanilla, "Thumbnail Maker", "APPINIT")/calc_absolute(vanilla, "NOOP", "APPINIT"))
+
+calc_absolute(vanilla, "Thumbnail Maker", "APPINIT")
+calc_absolute(vanilla, "NOOP", "APPINIT")
+calc_absolute(pb, "Thumbnail Maker", "APPINIT")
+calc_absolute(pb, "NOOP", "APPINIT")
 ```
 
 ```{r service_time_cmp, fig.width=7, fig.height=5}
@@ -222,7 +240,7 @@ ggsave("service_time.png")
 
 ```
 
-```{r}
+```{r, fig.asp=0.5}
 # Ambos os csv's (Criu e NoCriu) possuem as seguintes métricas:
 # MainEntry -- Timestamp em nanosegundos do momento em que a app entrou no código Main.
 # MainExit -- Timestamp em nanosegundos do momento em que a app saiu do código Main.
@@ -242,6 +260,7 @@ ggsave("service_time.png")
 require(dplyr)
 require(ggplot2)
 require(reshape)
+require(ggpubr)
 
 read_service_time <- function(f) {
   df <- read.csv(f) 
@@ -250,23 +269,110 @@ read_service_time <- function(f) {
     Value=df[df$Metric=="ServiceTime", ]$KernelTime_NS+df[df$Metric=="RuntimeReadyTime", ]$KernelTime_NS)
   colnames(df) <- c("app", "value")
   df$value <- df$value / 10^6 
-  df <- df %>% mutate(app = ifelse(app == "50", "Low", ifelse(app == 250, "Medium", "High")))
+  df <- df %>% mutate(app = ifelse(app == "50", "Small", ifelse(app == 250, "Medium", "Big")))
   return(df)
 }
-pb <- read_service_time("criu-nobpftrace-gc-warmup-noop-class-loader.csv")
-pb$type <- "Prebaking"
+pb <- read_service_time("criu-nobpf-nogc-warmup-noop-class-loader.csv")
+pb$type <- "Prebaking-Warmup"
+pb1 <- read_service_time("criu-nobpf-nogc-nowarmup-noop-class-loader.csv")
+pb1$type <- "Prebaking-NOWarmup"
 vanilla <- read_service_time("nocriu-nobpftrace-nogc-nowarmup-noop-class-loader.csv")
 vanilla$type <- "Vanilla"
 
+calculate_median <- function(df, app) {
+  df.t <- wilcox.test(df[df$app == app, ]$value, conf.int = T)
+  return(data.frame(
+    app=app,
+    value=df.t$estimate,
+    min=df.t$conf.int[1],
+    max=df.t$conf.int[2]))
+}
 
-p <- c("yellowgreen", "violetred4")
-ggplot(data.frame(value=vanilla$value/pb$value, app=pb$app), aes(x=app, value)) +
+calculate_median(pb, "Small")
+calculate_median(pb, "Medium")
+calculate_median(pb, "Big")
+calculate_median(pb1, "Small")
+calculate_median(pb1, "Medium")
+calculate_median(pb1, "Big")
+calculate_median(vanilla, "Small")
+calculate_median(vanilla, "Medium")
+calculate_median(vanilla, "Big")
+
+calculate_ratio <- function(pb, vanilla, app) {
+  pb.t <- wilcox.test(pb[pb$app == app, ]$value, conf.int = T)
+  vanilla.t <- wilcox.test(vanilla[vanilla$app == app, ]$value, conf.int = T)
+  return(data.frame(
+    type=pb$type,
+    app=app,
+    value=(vanilla.t$estimate/pb.t$estimate)*100,
+    min=(vanilla.t$conf.int[1]/pb.t$conf.int[1])*100,
+    max=(vanilla.t$conf.int[2]/pb.t$conf.int[2])*100))
+}
+
+result <- calculate_ratio(pb, vanilla, "Small")
+result <- rbind(result, calculate_ratio(pb, vanilla, "Medium"))
+result <- rbind(result, calculate_ratio(pb, vanilla, "Big"))
+result <- rbind(result, calculate_ratio(pb1, vanilla, "Small"))
+result <- rbind(result, calculate_ratio(pb1, vanilla, "Medium"))
+result <- rbind(result, calculate_ratio(pb1, vanilla, "Big"))
+
+
+ggplot(result, aes(x=app, value, fill=type)) +
+  #geom_errorbar(aes(ymin=min, ymax=max), width=.5) +
   geom_bar(position="dodge", stat = "identity") +
   theme_pubclean() +
-  scale_color_manual(values=p) +
-  labs(y = "Improvement (times)", x="Complexity") +
-  scale_x_discrete(limits=c("Low", "Medium", "High")) +
+  labs(y = "Startup Time Improvement (%)", x="Function Size", fill = "Type") +
+  scale_x_discrete(limits=c("Small", "Medium", "Big")) +
   theme(
     legend.position="bottom",
     panel.grid.major.x = element_line(colour = "darkgray", linetype = 3))
+
+ggsave("impact_function_size_cmp.png")
+```
+
+
+```{r, fig.asp=0.5}
+require(dplyr)
+require(ggplot2)
+require(reshape)
+require(ggpubr)
+
+read_startup_time <- function(f) {
+  df <- read.csv(f) 
+  df <- data.frame(
+    Complexity=df[df$Metric=="ServiceTime", ]$Loaded_Classes,
+    Value=df[df$Metric=="ServiceTime", ]$KernelTime_NS+df[df$Metric=="RuntimeReadyTime", ]$KernelTime_NS)
+  colnames(df) <- c("app", "value")
+  df$value <- df$value / 10^6 
+  df <- df %>% mutate(app = ifelse(app == "50", "Small", ifelse(app == 250, "Medium", "Big")))
+  return(df)
+}
+vanilla <- read_startup_time("nocriu-nobpftrace-nogc-nowarmup-noop-class-loader.csv")
+vanilla$type <- "Vanilla"
+
+calculate_median <- function(df, app) {
+  df.t <- wilcox.test(df[df$app == app, ]$value, conf.int = T)
+  return(data.frame(
+    type=df$type,
+    app=app,
+    value=df.t$estimate,
+    min=df.t$conf.int[1],
+    max=df.t$conf.int[2]))
+}
+
+result <- calculate_median(vanilla, "Small")
+result <- rbind(result, calculate_median(vanilla, "Medium"))
+result <- rbind(result, calculate_median(vanilla, "Big"))
+
+ggplot(result, aes(x=app, y=value)) +
+  geom_bar(position="dodge", stat="identity", fill="violetred4") +
+  geom_errorbar(aes(ymin=min, ymax=max), width=.5) +
+  theme_pubclean() +
+  labs(y = "Startup Time (ms)", x="Function Size") +
+  scale_x_discrete(limits=c("Small", "Medium", "Big")) +
+  theme(
+    legend.position="bottom",
+    panel.grid.major.x = element_line(colour = "darkgray", linetype = 3))
+
+ggsave("impact_function_size_vanilla.png")
 ```
