@@ -175,6 +175,38 @@ ggplot(rbind(noop_pb_perc, noop_v_perc, tm_pb_perc, tm_v_perc), aes(fill=type, y
 
 ggsave("startup_components.png")
 
+startup_components <- 
+  rbind(noop_v_perc %>%
+        group_by(app, type) %>%
+        mutate(value = (perc/100.0) * median(vanilla_noop$value)),
+      noop_pb_perc %>%
+        group_by(app, type) %>% 
+        mutate(value = (perc/100.0) * median(pb_noop$value)) %>%
+        filter(metric != "RTS") %>%
+        mutate(metric = replace(metric, metric=="APPINIT", "RESTORE")),
+      tm_v_perc %>%
+        group_by(app, type) %>%
+        mutate(value = (perc/100.0) * median(vanilla_thumb$value)),
+      tm_pb_perc %>%
+        group_by(app, type) %>%
+        mutate(value = (perc/100.0) * median(pb_thumb$value)) %>%
+        filter(metric != "RTS") %>%
+        mutate(metric = replace(metric, metric=="APPINIT", "RESTORE")))
+
+ggplot(startup_components %>%
+         ungroup() %>%
+         filter(!(metric %in% c("CLONE", "EXEC")))) +
+  facet_wrap(~app) +
+  geom_bar(aes(y = value, 
+               x = type, 
+               fill = factor(metric, c("RESTORE", "APPINIT", "RTS"))), 
+           stat = "identity") +
+  labs(fill = "Metric", x = "Technique", y = "Startup Time (ms)") +
+  theme_pubclean() +
+  scale_fill_grey(start = .8, end = 0) +
+  theme(panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
+
+ggsave("stacked_startup_components_bar_plot.png")
 
 calc_absolute <- function(df, appName, m){
   aux <- df %>%
