@@ -80,7 +80,7 @@ ggplot(rbind(pb, vanilla), aes(type, value, color=type)) +
   stat_summary(fun.data = median_cl_boot, geom = "errorbar") +
   stat_summary(fun.data = median_ci_text, geom = "text", size=3.5)  +
   facet_wrap(~app) +
-  theme_pubclean() +
+  #theme_pubclean() +
   scale_color_manual(values=p) +
   scale_y_continuous(limits = c(0, max(vanilla$value)+20), breaks = seq(0, max(vanilla$value), by = 50)) +
   labs(x="Technique", y="Startup time (ms)")+
@@ -100,7 +100,8 @@ ggsave("startup_cmp_nowarmup.png")
 require(dplyr)
 require(ggplot2)
 require(ggpubr)
-
+require(reshape2)
+require(Rmisc)
 
 read_startup_bpfstrace <- function(f) {
   df <- read.csv(f) 
@@ -169,7 +170,7 @@ ggplot(rbind(noop_pb_perc, noop_v_perc, tm_pb_perc, tm_v_perc), aes(fill=type, y
   scale_x_discrete(limits=c("APPINIT","RTS", "EXEC", "CLONE")) +
   scale_y_continuous(limits=c(0,110), breaks = seq(0, 110, 20)) +
   coord_flip() +
-  theme_pubclean() +
+  #theme_pubclean() +
   theme(
     panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
 
@@ -182,28 +183,27 @@ startup_components <-
       noop_pb_perc %>%
         group_by(app, type) %>% 
         mutate(value = (perc/100.0) * median(pb_noop$value)) %>%
-        filter(metric != "RTS") %>%
-        mutate(metric = replace(metric, metric=="APPINIT", "RESTORE")),
+        filter(metric != "RTS"), #%>%
+        #mutate(metric = replace(metric, metric=="APPINIT", "RESTORE")),
       tm_v_perc %>%
         group_by(app, type) %>%
         mutate(value = (perc/100.0) * median(vanilla_thumb$value)),
       tm_pb_perc %>%
         group_by(app, type) %>%
         mutate(value = (perc/100.0) * median(pb_thumb$value)) %>%
-        filter(metric != "RTS") %>%
-        mutate(metric = replace(metric, metric=="APPINIT", "RESTORE")))
+        filter(metric != "RTS"))# %>%
+        #mutate(metric = replace(metric, metric=="APPINIT", "RESTORE")))
 
-ggplot(startup_components %>%
-         ungroup() %>%
-         filter(!(metric %in% c("CLONE", "EXEC")))) +
+ggplot(startup_components) +
   facet_wrap(~app) +
   geom_bar(aes(y = value, 
                x = type, 
-               fill = factor(metric, c("RESTORE", "APPINIT", "RTS"))), 
+               fill = factor(metric, c("RESTORE", "APPINIT", "RTS", "EXEC", "CLONE"))), 
            stat = "identity") +
   labs(fill = "Metric", x = "Technique", y = "Startup Time (ms)") +
-  theme_pubclean() +
-  scale_fill_grey(start = .8, end = 0) +
+  #theme_pubclean() +
+  theme_bw() +
+  scale_fill_grey(start = 0, end = 0.85) +
   theme(panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
 
 ggsave("stacked_startup_components_bar_plot.png")
@@ -224,6 +224,21 @@ calc_absolute(vanilla, "Thumbnail Maker", "APPINIT")
 calc_absolute(vanilla, "NOOP", "APPINIT")
 calc_absolute(pb, "Thumbnail Maker", "APPINIT")
 calc_absolute(pb, "NOOP", "APPINIT")
+
+ggplot(summarySEwithin(vanilla[which(vanilla$metric == "RTS"), ], 
+                       measurevar="value", 
+                       withinvars="app",
+                       #idvar="subject", 
+                       na.rm=FALSE, 
+                       conf.interval=.95),
+       aes(x = app, y = value, group = 1)) +
+  geom_line() +
+  geom_errorbar(width=.1, aes(ymin=value-ci, ymax=value+ci)) +
+  geom_point(shape=21, size=3, fill="white") +
+  labs(y = "Runtime Startup Time (ms)", x = "Vanilla Application") +
+  theme_bw()
+
+ggsave("confidence-interval-rts-vanilla.png")
 ```
 
 ```{r service_time_cmp, fig.width=7, fig.height=5}
