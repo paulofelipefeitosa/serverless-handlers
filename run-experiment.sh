@@ -14,8 +14,12 @@ do
 	    OPT_PATH="${i#*=}"
 	    shift # past argument=value
 	    ;;
-	    -t=*|--tracer_dir=*) # Agent Dir
+	    -t=*|--tracer_dir=*) # Tracer directory
 	    TRACER_DIR="${i#*=}"
+	    shift # past argument=value
+	    ;;
+	    -t_eb=*|--tracer_executor_binary=*) # Tracer executor binary path
+	    TRACER_EB="${i#*=}"
 	    shift # past argument=value
 	    ;;
 	    -jar=*|--jar_name=*) # Jar Name to no criu executions
@@ -144,14 +148,19 @@ BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$GC-$WARM
 run_bpftrace() {
 	if [ -n "$TRACER_DIR" ];
 	then 
-		echo "Running bpftrace probes"
+		killall -v bpftrace
+		>&2 echo "Running bpftrace probes"
 
-		bpftrace -B 'line' $TRACER_DIR/execve-clone-probes.bt > $BPFTRACE_OUT &
+		bpftrace -B 'line' $TRACER_DIR/execve-clone-probes.bt ${EXP_APP_NAME:0:15} $TRACER_EB > $BPFTRACE_OUT &
+		BPFTRACER_PID=$!
+		>&2 echo "BPFTracer PID=$BPFTRACER_PID"
 
 		while [ $(wc -c "$BPFTRACE_OUT" | awk '{print $1}') -eq 0 ];
 		do
 			sleep 1
 		done
+
+		echo "$BPFTRACER_PID"
 	fi
 }
 
@@ -159,15 +168,20 @@ parse_bpftrace() {
 	if [ -n "$TRACER_DIR" ];
 	then 
 		EXECID=$1
-		PROCESS_COMMAND=$2
-		BIN_NAME=$3
-		EXEC_SUCCESS=$4
+		EXEC_SUCCESS=$2
+		BPFTRACER_PID=$3
 
-		killall -v bpftrace
+		PREVIOUS_LOG_SIZE=$(wc -c "$BPFTRACE_OUT" | awk '{print $1}')
+		echo "Killing bpftracer with pid=$BPFTRACER_PID"
+		kill -SIGINT $BPFTRACER_PID
 
 		if [ $EXEC_SUCCESS -eq 0 ];
 		then
-			python -u $TRACER_DIR/execve-clone-parser-bpftrace.py $EXECID $PROCESS_COMMAND $BIN_NAME < $BPFTRACE_OUT >> $RESULTS_FILENAME
+			while [ $(wc -c "$BPFTRACE_OUT" | awk '{print $1}') -eq $PREVIOUS_LOG_SIZE ];
+			do
+				sleep 1
+			done
+			python -u $TRACER_DIR/execve-clone-parser-bpftrace.py $EXECID < $BPFTRACE_OUT >> $RESULTS_FILENAME
 		fi
 	fi
 }
@@ -185,7 +199,7 @@ do
 				echo "HTTP Server CRIU Handler"
 				dump_criu_app
 
-				run_bpftrace
+				BPFTRACER_PID=$( run_bpftrace )
 
 				echo "Running execute requests script"
 				set +e
@@ -198,13 +212,13 @@ do
 				killall -v java
 				set -e
 
-				parse_bpftrace $i "execute" "criu" $EXECUTION_SUCCESS
+				parse_bpftrace $i $EXECUTION_SUCCESS $BPFTRACER_PID
 
 				truncate --size=0 $APP_DIR/$CRIU_APP_OUTPUT
 			else
 				echo "HTTP Server Handler"
 
-				run_bpftrace
+				BPFTRACER_PID=$( run_bpftrace )
 
 				echo "Running execute requests script"
 				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE $SF_JAR_PATH >> $RESULTS_FILENAME
@@ -212,7 +226,7 @@ do
 
 				echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
 
-				parse_bpftrace $i "execute" "java" $EXECUTION_SUCCESS
+				parse_bpftrace $i $EXECUTION_SUCCESS $BPFTRACER_PID
 			fi
 		elif [ $TYPE_DIR == "std-server-handler" ]
 		then
