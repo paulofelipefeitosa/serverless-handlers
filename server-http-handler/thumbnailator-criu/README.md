@@ -14,7 +14,7 @@ gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"/usr/lib/jvm/java-8-ora
 After running maven and build the project you can run the server running the jar file. Some environment variables definition are required.  See an example as follow.
 
 ```bash
-scale=0.1 image_path=BhlDUO.jpg setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App  < /dev/null &> app.log &
+scale=0.1 image_path=BhlDUOR.jpg setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App  < /dev/null &> app.log &
 ```
 
 ## Apply Requests
