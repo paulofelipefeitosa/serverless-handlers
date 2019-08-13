@@ -19,7 +19,7 @@ import com.thumbnailator.model.*;
 public class App {
 
     public static void main(String[] args) throws Exception {
-        System.out.println("Entered in main: " + System.nanoTime());
+        System.out.println("EIM: " + System.nanoTime());
         int port = 9000;
 
         IHandler handler = new com.thumbnailator.function.Handler();
@@ -32,7 +32,7 @@ public class App {
         server.setExecutor(Executors.newSingleThreadExecutor());
         server.start();
         
-        System.out.println("Exit from main: " + System.nanoTime());
+        System.out.println("EFM: " + System.nanoTime());
     }
 
     static class InvokeHandler implements HttpHandler {
