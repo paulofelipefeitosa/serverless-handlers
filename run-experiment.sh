@@ -42,7 +42,10 @@ done
 
 APP_DIR=$TYPE_DIR/$APP_NAME
 JAR_PATH=$APP_DIR/target/$JAR_NAME
-SF_JAR_NAME=$(basename $SF_JAR_PATH)
+if [ -n "$SF_JAR_PATH" ];
+then
+	SF_JAR_NAME=$(basename $SF_JAR_PATH)
+fi
 
 HTTP_SERVER_ADDRESS=localhost:9000
 CRIU_APP_OUTPUT=app.log
