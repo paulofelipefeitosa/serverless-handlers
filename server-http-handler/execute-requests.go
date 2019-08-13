@@ -35,12 +35,17 @@ func startCRIUServer(jarPath string, serverLogFile string) (*exec.Cmd, io.ReadCl
 	return upServerCmd, serverStdout, err
 }
 
-func startDefaultServer(jarPath string, args string) (*exec.Cmd, io.ReadCloser, error) {
+func startDefaultServer(jarPath string, args string) (*exec.Cmd, io.ReadCloser, io.ReadCloser, error) {
 	fmt.Fprintln(os.Stderr, "Default Handler Type")
 	upServerCmd := exec.Command("java", "-jar", jarPath, args)
 	upServerCmd.Env = os.Environ()
+	
 	serverStdout, err := upServerCmd.StdoutPipe()
-	return upServerCmd, serverStdout, err
+	if err != nil {
+		log.Fatal(err)
+	}
+	serverStderr, err := upServerCmd.StderrPipe()
+	return upServerCmd, serverStdout, serverStderr, err
 }
 
 func checkIfFileExists(filePath string) {
@@ -64,8 +69,16 @@ func main() {
 	executionID := os.Args[4]
 	jarPath := os.Args[5]
 	handlerType := os.Args[6]
-	optPath := os.Args[7] // Synthetic Function JAR File Path or Server Log File
-	classLoadStats := (handlerType != "criu") && (optPath != "")
+	
+	var optPath string
+	var classLoadStats bool
+	if len(os.Args) > 7 {
+		optPath = os.Args[7] // Synthetic Function JAR File Path or Server Log File
+		classLoadStats = (handlerType != "criu") && (optPath != "")
+	} else {
+		optPath = ""
+		classLoadStats = false
+	}
 
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Amount of Requests is not an integer, given value %s", os.Args[3])
@@ -83,11 +96,11 @@ func main() {
 	functionURL := fmt.Sprintf("http://%s%s", serverAddress, endpoint)
 
 	var upServerCmd* exec.Cmd
-	var serverStdout io.ReadCloser
+	var serverStdout, serverStderr io.ReadCloser
 	if handlerType == "criu" {
 		upServerCmd, serverStdout, err = startCRIUServer(jarPath, optPath)
 	} else {
-		upServerCmd, serverStdout, err = startDefaultServer(jarPath, optPath)
+		upServerCmd, serverStdout, serverStderr, err = startDefaultServer(jarPath, optPath)
 	}
 
 	if err != nil {
@@ -104,6 +117,16 @@ func main() {
 
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Max tries reached")
+
+		if serverStderr != nil {
+			fmt.Fprintln(os.Stderr, fmt.Sprint("Application Stderr == \n"))
+			if _, err := io.Copy(os.Stderr, serverStderr); err != nil {
+				log.Fatal(err)
+			}
+			fmt.Fprintln(os.Stderr, fmt.Sprint("Application Stderr // \n"))
+			serverStderr.Close()
+		}
+		serverStdout.Close()
 		
 		// Kill Http server process
 		if err := upServerCmd.Process.Kill(); err != nil {
@@ -138,6 +161,9 @@ func main() {
 		fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, i, serviceTime[i - 1])
 	}
 
+	if serverStderr != nil {
+		serverStderr.Close()
+	}
 	serverStdout.Close()
 
 	fmt.Fprintln(os.Stderr, fmt.Sprintf("Killing Process: %d\n", upServerCmd.Process.Pid))
