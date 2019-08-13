@@ -22,9 +22,9 @@ python -u execve-clone-probes-parser-bcc.py <executionID> < $BCC_TOOL_OUT
 [BPFTrace Install](https://github.com/iovisor/bpftrace/blob/master/INSTALL.md).
 
 ### Run
-Running the execve, clone & fork probes.
+Running the execve, clone & fork probes. Possible args: "execute-request" "/usr/bin/java".
 ```sh
-bpftrace -B 'line' execve-clone-probes.bt > $BPFTRACE_OUT &
+bpftrace -B 'line' execve-clone-probes.bt <program_command> <executor_binary> > $BPFTRACE_OUT &
 ```
 
 ### Parse
