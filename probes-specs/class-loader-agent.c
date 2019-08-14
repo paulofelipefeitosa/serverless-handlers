@@ -32,10 +32,14 @@ static void trace_class(jvmtiEnv *jvmti_env, const jint size) {
 static void print_stats(jvmtiEnv *jvmti_env) {
     (*jvmti_env)->RawMonitorEnter(jvmti_env, rawMonitorID);
 
+    // total size of loaded classes 
     fprintf(out, "Before Main Exit TSoLC: %lld\n", ldc_size_bm);
+    // total of loaded classes
     fprintf(out, "Before Main Exit ToLC: %d\n", total_ldc_bm);
     
+    // total size of loaded classes 
     fprintf(out, "After Main Exit TSoLC: %lld\n", ldc_size_am);
+    // total of loaded classes 
     fprintf(out, "After Main Exit ToLC: %d\n", total_ldc_am);
 
     (*jvmti_env)->RawMonitorExit(jvmti_env, rawMonitorID);

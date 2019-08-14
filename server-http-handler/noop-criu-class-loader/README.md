@@ -15,7 +15,7 @@ The NoOp CRIU Class Loader will fetch and load the synthetic classes on its own 
 ## Run
 ```sh
 # Vai subir um servidor HTTP na porta 9000
-setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App  < /dev/null &> app.log &
+setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App '<path-to-synthetic-func-jar>' < /dev/null &> app.log &
 ```
 
 ## Apply Requests
