@@ -80,7 +80,7 @@ ggplot(rbind(pb, vanilla), aes(type, value, color=type)) +
   stat_summary(fun.data = median_cl_boot, geom = "errorbar") +
   stat_summary(fun.data = median_ci_text, geom = "text", size=3.5)  +
   facet_wrap(~app) +
-  theme_pubclean() +
+  #theme_pubclean() +
   scale_color_manual(values=p) +
   scale_y_continuous(limits = c(0, max(vanilla$value)+20), breaks = seq(0, max(vanilla$value), by = 50)) +
   labs(x="Technique", y="Startup time (ms)")+
@@ -92,6 +92,43 @@ ggplot(rbind(pb, vanilla), aes(type, value, color=type)) +
 ggsave("startup_cmp_nowarmup.png")
 ```
 
+```{r bpftrace_data_treatment, fig.width=7, fig.height=5}
+require(dplyr)
+
+read_bpftrace_pure_data <- function(f, app_name) {
+  df <- read.csv(f)
+  df$App <- app_name
+  df <- df %>% rename(Value_NS = KernelTime_NS)
+  
+  clone <- df[which(df$Metric == "CloneEntry"), ]
+  clone$Value_NS <- df[which(df$Metric == "CloneExit"), ]$Value_NS - clone$Value_NS
+  clone$Metric <- "CloneTime"
+  
+  exec <- df[which(df$Metric == "CloneExit"), ]
+  exec$Value_NS <- df[which(df$Metric == "ExecveExit"), ]$Value_NS - exec$Value_NS
+  exec$Metric <- "ExecTime"
+  
+  runtime <- df[which(df$Metric == "ExecveExit"), ]
+  runtime$Value_NS <- df[which(df$Metric == "MainEntry"), ]$Value_NS - runtime$Value_NS
+  runtime$Metric <- "RuntimeTime"
+  
+  appinit <- df[which(df$Metric == "MainEntry"), ]
+  appinit$Value_NS <- df[which(df$Metric == "Ready2Serve"), ]$Value_NS - appinit$Value_NS
+  appinit$Metric <- "InitializationTime"
+  
+  return(rbind(clone, exec, runtime, appinit))
+}
+
+nocriu_newbpftrace_nogc_nowarmup <- 
+  rbind(read_bpftrace_pure_data('../server-http-handler-noop-1565746178-1000-1---.csv', "NOOP"),
+        read_bpftrace_pure_data('../server-http-handler-thumbnailator-1565727388-1000-1---.csv', "Thumbnail Maker"))
+
+write.csv(nocriu_newbpftrace_nogc_nowarmup, 
+  file = "nocriu_newbpftrace_nogc_nowarmup.csv",
+  row.names = FALSE)
+```
+
+
 ```{r bpfstrace_cmp, fig.width=7, fig.height=5}
 # Metrics:
 # InitializationTime -> time between the exec of the function and until it is ready to start serving requests.
@@ -101,13 +138,12 @@ require(dplyr)
 require(ggplot2)
 require(ggpubr)
 
-
 read_startup_bpfstrace <- function(f) {
   df <- read.csv(f) 
   df <- df %>% filter(ReqID == 0) %>% select(App, Metric, Value_NS)
   colnames(df) <- c("app", "metric", "value")
   df$value <- df$value / 10^6
-  df <- df %>% mutate(app = ifelse(app == "NoOp", "NOOP", "Thumbnail Maker"))
+  df <- df %>% mutate(app = ifelse(app == "NoOp" | app == "NOOP", "NOOP", "Thumbnail Maker"))
 
   SAMPLE_SIZE <- 200
   ct <- df %>% filter(metric == "CloneTime") %>% select(app, metric, value) %>% sample_n(SAMPLE_SIZE)
@@ -131,14 +167,14 @@ read_startup_bpfstrace <- function(f) {
 }
 
 pb <- read_startup_bpfstrace("criu_bpftrace_nogc_nowarmup.csv")
-vanilla <- read_startup_bpfstrace("nocriu_bpftrace_nogc_nowarmup.csv")
+vanilla <- read_startup_bpfstrace("nocriu_newbpftrace_nogc_nowarmup.csv")
 
 calc_perc <- function(df, appName){
-  df %>%
+  return (df %>%
     filter(app==appName) %>%
     group_by(metric) %>%
     summarise(sum=sum(value)) %>%
-    mutate(perc=signif((sum/sum(sum))*100, digits=3))
+    mutate(perc=signif((sum/sum(sum))*100, digits=3)))
 }
 
 noop_pb_perc <- calc_perc(pb, "NOOP")
@@ -169,12 +205,44 @@ ggplot(rbind(noop_pb_perc, noop_v_perc, tm_pb_perc, tm_v_perc), aes(fill=type, y
   scale_x_discrete(limits=c("APPINIT","RTS", "EXEC", "CLONE")) +
   scale_y_continuous(limits=c(0,110), breaks = seq(0, 110, 20)) +
   coord_flip() +
-  theme_pubclean() +
+  #theme_pubclean() +
+  theme_bw() +
   theme(
     panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
 
 ggsave("startup_components.png")
 
+startup_components <- 
+  rbind(noop_v_perc %>%
+        group_by(app, type) %>%
+        mutate(value = (perc/100.0) * median(vanilla_noop$value)),
+      noop_pb_perc %>%
+        group_by(app, type) %>% 
+        mutate(value = (perc/100.0) * median(pb_noop$value)) %>%
+        filter(metric != "RTS"), #%>%
+        #mutate(metric = replace(metric, metric=="APPINIT", "RESTORE")),
+      tm_v_perc %>%
+        group_by(app, type) %>%
+        mutate(value = (perc/100.0) * median(vanilla_thumb$value)),
+      tm_pb_perc %>%
+        group_by(app, type) %>%
+        mutate(value = (perc/100.0) * median(pb_thumb$value)) %>%
+        filter(metric != "RTS"))# %>%
+        #mutate(metric = replace(metric, metric=="APPINIT", "RESTORE")))
+
+ggplot(startup_components) +
+  facet_wrap(~app) +
+  geom_bar(aes(y = value, 
+               x = type, 
+               fill = factor(metric, c("RESTORE", "APPINIT", "RTS", "EXEC", "CLONE"))), 
+           stat = "identity") +
+  labs(fill = "Metric", x = "Technique", y = "Startup Time (ms)") +
+  #theme_pubclean() +
+  theme_bw() +
+  scale_fill_grey(start = 0, end = 0.85) +
+  theme(panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
+
+ggsave("stacked_startup_components_bar_plot.png")
 
 calc_absolute <- function(df, appName, m){
   aux <- df %>%
@@ -192,6 +260,27 @@ calc_absolute(vanilla, "Thumbnail Maker", "APPINIT")
 calc_absolute(vanilla, "NOOP", "APPINIT")
 calc_absolute(pb, "Thumbnail Maker", "APPINIT")
 calc_absolute(pb, "NOOP", "APPINIT")
+
+```
+
+``` {r rts-confidence-interval}
+require(reshape2)
+require(Rmisc)
+
+ggplot(summarySEwithin(vanilla[which(vanilla$metric == "RTS"), ], 
+                       measurevar="value", 
+                       withinvars="app",
+                       #idvar="subject", 
+                       na.rm=FALSE, 
+                       conf.interval=.95),
+       aes(x = app, y = value, group = 1)) +
+  geom_line() +
+  geom_errorbar(width=.1, aes(ymin=value-ci, ymax=value+ci)) +
+  geom_point(shape=21, size=3, fill="white") +
+  labs(y = "Runtime Startup Time (ms)", x = "Vanilla Application") +
+  theme_bw()
+
+ggsave("confidence-interval-rts-vanilla.png")
 ```
 
 ```{r service_time_cmp, fig.width=7, fig.height=5}
@@ -230,7 +319,8 @@ cOn <- p[2]
 ggplot(rbind(pb, vanilla), aes(value, linetype=type, color=type)) +
   facet_wrap(~app, scales="free") +
   stat_ecdf(size=1.5) +
-  theme_pubclean() +
+  #theme_pubclean() +
+  theme_bw() +
   scale_color_manual(values=p) +
   labs(y = "ECDF", x="Tempo de Serviço (ms)", linetype="Técnica", color="Técnica") +
   theme(
