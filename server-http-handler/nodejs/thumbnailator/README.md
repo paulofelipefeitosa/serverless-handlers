@@ -1,4 +1,4 @@
-# Noop HTTP Server
+# Thumnail Maker HTTP Server
 
 ## Install
 
