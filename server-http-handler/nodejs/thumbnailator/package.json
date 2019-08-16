@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "license": "MIT",
   "author": "Paulo Feitosa",
+  "main": "app.js",
   "dependencies": {
-    "sharp": "^0.21.3",
+    "sharp": "^0.23.0"
   }
 }
-
