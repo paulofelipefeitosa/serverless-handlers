@@ -14,9 +14,7 @@ then
 	killall -v java
 	set -e
 
-	javac *.java
-	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"$OPT_PATH/include/" -I"$OPT_PATH/include/linux/" GC.c -o libgc.so
-
+	mvn install
 	cd -
 elif [ $TYPE == "dump" ];
 	echo "Dump Java App"
@@ -49,7 +47,7 @@ elif [ $TYPE == "dump" ];
 		esac
 	done
 	truncate --size=0 $CRIU_APP_OUTPUT
-	scale=$SCALE image_path=$IMAGE_PATH setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App $SF_JAR_PATH  < /dev/null &> $CRIU_APP_OUTPUT &
+	scale=$SCALE image_path=$IMAGE_PATH setsid java -jar $APP_DIR/target/app-0.0.1-SNAPSHOT.jar $SF_JAR_PATH < /dev/null &> $CRIU_APP_OUTPUT &
 
 	APP_PID=$(pgrep java)
 	echo "Java App PID [$APP_PID]"
