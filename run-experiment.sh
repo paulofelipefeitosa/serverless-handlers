@@ -11,10 +11,6 @@ HANDLER_TYPE=$7 # criu or no-criu
 for i in "$@"
 do
 	case $i in
-	    -jvm=*|--jvm_path=*) # CRIU: /usr/lib/jvm/java-8-oracle
-	    OPT_PATH="${i#*=}"
-	    shift # past argument=value
-	    ;;
 	    -t=*|--tracer_dir=*) # Tracer directory
 	    TRACER_DIR="${i#*=}"
 	    shift # past argument=value
