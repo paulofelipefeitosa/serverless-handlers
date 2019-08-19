@@ -58,6 +58,8 @@ build_criu_app() {
 	echo "Building $APP_DIR App"
 	bash $criu_builder "build" $APP_DIR
 
+	sleep 0.5
+
 	echo "Running $APP_DIR App"
 	bash $criu_builder "dump" $APP_DIR $HTTP_SERVER_ADDRESS $CRIU_APP_OUTPUT -scale=0.1 -image_path=$IMAGE_PATH -sfjar=$SF_JAR_PATH -warm=$WARM_REQ
 }
