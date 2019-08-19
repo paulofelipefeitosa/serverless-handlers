@@ -180,6 +180,7 @@ do
 
 				echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
 				echo "Trying to kill HTTP Server Handler process"
+				set +e
 				killall -v $RUNTIME
 				set -e
 
