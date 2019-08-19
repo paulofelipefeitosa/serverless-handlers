@@ -22,22 +22,27 @@ func Now() int64 {
 	return int64(nanotime())
 }
 
-func startCRIUServer(jarPath string, serverLogFile string) (*exec.Cmd, io.ReadCloser, error) {
+func startCRIUServer(appDir string, serverLogFile string) (*exec.Cmd, io.ReadCloser, error) {
 	fmt.Fprintln(os.Stderr, "Criu Handler Type")
 	upServerCmd := exec.Command("criu", "restore", "-d", "-v3", "-o", "restore.log")
 	upServerCmd.Env = os.Environ()
 	
 	currentDir, _ := os.Getwd()
-	upServerCmd.Dir = fmt.Sprintf("%s/%s", currentDir, jarPath)
+	upServerCmd.Dir = fmt.Sprintf("%s/%s", currentDir, appDir)
 	fmt.Fprintf(os.Stderr, "Dir [%s]\n", upServerCmd.Dir)
 	
 	serverStdout, err := os.Open(serverLogFile)
 	return upServerCmd, serverStdout, err
 }
 
-func startDefaultServer(jarPath string, args string) (*exec.Cmd, io.ReadCloser, io.ReadCloser, error) {
+func startDefaultServer(runtime string, appDir string, args string) (*exec.Cmd, io.ReadCloser, io.ReadCloser, error) {
 	fmt.Fprintln(os.Stderr, "Default Handler Type")
-	upServerCmd := exec.Command("java", "-jar", jarPath, args)
+	var upServerCmd *exec.Cmd
+	if runtime == "java" {
+		upServerCmd = exec.Command("java", "-jar", fmt.Sprintf("%s/target/app-0.0.1-SNAPSHOT.jar", appDir), args)
+	} else if runtime == "nodejs" {
+		upServerCmd = exec.Command("node", fmt.Sprintf("%s/app.js", appDir), args)
+	}
 	upServerCmd.Env = os.Environ()
 	
 	serverStdout, err := upServerCmd.StdoutPipe()
@@ -67,13 +72,14 @@ func main() {
 	endpoint := os.Args[2]
 	nRequests, err := strconv.ParseInt(os.Args[3], 10, 64)
 	executionID := os.Args[4]
-	jarPath := os.Args[5]
-	handlerType := os.Args[6]
+	runtime := os.Args[5]
+	appDir := os.Args[6]
+	handlerType := os.Args[7]
 	
 	var optPath string
 	var classLoadStats bool
-	if len(os.Args) > 7 {
-		optPath = os.Args[7] // Synthetic Function JAR File Path or Server Log File
+	if len(os.Args) > 8 {
+		optPath = os.Args[8] // Synthetic Function JAR File Path or Server Log File
 		classLoadStats = (handlerType != "criu") && (optPath != "")
 	} else {
 		optPath = ""
@@ -88,7 +94,6 @@ func main() {
 	checkEmpty(endpoint, "endpoint")
 	checkEmpty(executionID, "executionID")
 	checkEmpty(handlerType, "handlerType")
-	checkIfFileExists(jarPath)
 	if classLoadStats || (handlerType == "criu") {
 		checkIfFileExists(optPath)
 	}
@@ -98,9 +103,9 @@ func main() {
 	var upServerCmd* exec.Cmd
 	var serverStdout, serverStderr io.ReadCloser
 	if handlerType == "criu" {
-		upServerCmd, serverStdout, err = startCRIUServer(jarPath, optPath)
+		upServerCmd, serverStdout, err = startCRIUServer(appDir, optPath)
 	} else {
-		upServerCmd, serverStdout, serverStderr, err = startDefaultServer(jarPath, optPath)
+		upServerCmd, serverStdout, serverStderr, err = startDefaultServer(runtime, appDir, optPath)
 	}
 
 	if err != nil {
@@ -181,10 +186,10 @@ func main() {
 
 func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverStdout io.ReadCloser) ([]int64, []int64) {
 	var roundTripTime, serviceTime []int64
-	var startServiceNanoTS, endServiceNanoTS int64
 	for i := int64(1); i < nRequests; i++ {
 		response, err, sendRequestNanoTS, receiveResponseNanoTS := sendRequest2(functionURL)
 		if err == nil && response.StatusCode == http.StatusOK {
+			var startServiceNanoTS, endServiceNanoTS int64
 			fmt.Fscanf(serverStdout, "T4: %d", &startServiceNanoTS)
 			fmt.Fscanf(serverStdout, "T6: %d", &endServiceNanoTS)
 			

@@ -11,5 +11,5 @@ mvn clean install
 After running maven and build the project you can run the server running the jar file. Some environment variables definition are required.  See an example as follow.
 
 ```bash
-scale=0.1 image_url=https://i.imgur.com/BhlDUOR.jpg java -jar target/noop-server-maven-0.0.1-SNAPSHOT.jar
+java -jar target/noop-server-maven-0.0.1-SNAPSHOT.jar
 ```

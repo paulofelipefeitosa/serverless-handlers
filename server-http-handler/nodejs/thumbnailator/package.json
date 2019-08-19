@@ -1,0 +1,10 @@
+{
+  "name": "static-image-resizer",
+  "version": "1.0.0",
+  "license": "MIT",
+  "author": "Paulo Feitosa",
+  "main": "app.js",
+  "dependencies": {
+    "sharp": "^0.23.0"
+  }
+}

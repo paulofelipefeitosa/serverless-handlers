@@ -1,11 +1,12 @@
 #!/bin/bash
 set -e
 TYPE_DIR=$1 # server-http-handler or std-server-handler
-APP_NAME=$2 # APP DIR NAME
-IMAGE_URL=$3 # URL to download image
-REP_EXEC=$4 # integer value
-REP_REQ=$5 # integer value
-HANDLER_TYPE=$6 # criu or no-criu
+RUNTIME=$2 # java, nodejs, python
+APP_NAME=$3 # APP DIR NAME
+IMAGE_URL=$4 # URL to download image
+REP_EXEC=$5 # integer value
+REP_REQ=$6 # integer value
+HANDLER_TYPE=$7 # criu or no-criu
 
 for i in "$@"
 do
@@ -22,14 +23,6 @@ do
 	    TRACER_EB="${i#*=}"
 	    shift # past argument=value
 	    ;;
-	    -jar=*|--jar_name=*) # Jar Name to no criu executions
-	    JAR_NAME="${i#*=}"
-	    shift # past argument=value
-	    ;;
-	    -gc|--enable_gc) # Enable force GC request
-	    GC=YES
-	    shift # past argument with no value
-	    ;;
 	    -sfjar=*|--sf_jar_name=*) # Synthetic Function Jar Path
 	    SF_JAR_PATH="${i#*=}"
 	    shift # past argument=value
@@ -44,8 +37,7 @@ do
 	esac
 done
 
-APP_DIR=$TYPE_DIR/$APP_NAME
-JAR_PATH=$APP_DIR/target/$JAR_NAME
+APP_DIR=$TYPE_DIR/$RUNTIME/$APP_NAME
 if [ -n "$SF_JAR_PATH" ];
 then
 	SF_JAR_NAME=$(basename $SF_JAR_PATH)
@@ -54,72 +46,36 @@ fi
 HTTP_SERVER_ADDRESS=localhost:9000
 CRIU_APP_OUTPUT=app.log
 
-dump_criu_app() {
-	cd $APP_DIR
+build_criu_app() {
+	if [ $RUNTIME == "java" ];
+	then
+		criu_builder=$TYPE_DIR/$RUNTIME/java-criu-builder.sh
+	elif [ $RUNTIME == "nodejs" ];
+	then
+		criu_builder=$TYPE_DIR/$RUNTIME/nodejs-criu-builder.sh
+	fi
 
-	echo "Remove any previous dump files"
-	set +e
-	rm *.img
-	set -e
+	echo "Building $APP_DIR App"
+	bash $criu_builder "build" $APP_DIR
 
-	echo "Building $APP_DIR App Classes"
-	javac *.java
-	gcc -shared -fpic -I"/usr/lib/jvm/java-6-sun/include" -I"$OPT_PATH/include/" -I"$OPT_PATH/include/linux/" GC.c -o libgc.so
-
-	set +e
-	killall -v java
-	sleep 1
-	set -e
+	sleep 0.5
 
 	echo "Running $APP_DIR App"
-	echo "" > $CRIU_APP_OUTPUT
-	scale=0.1 image_path=$IMAGE_PATH setsid java -Djvmtilib=${PWD}/libgc.so -classpath . App $SF_JAR_PATH  < /dev/null &> $CRIU_APP_OUTPUT &
-	sleep 1
-
-	APP_PID=$(pgrep java)
-	echo "App PID [$APP_PID]"
-	ps aux | grep java
-
-	if [ -n "$WARM_REQ" ];
-	then 
-		echo "Warming $APP_DIR App"
-		while [[ "$(curl --header 'X-Warm-Request: true' -s -o /dev/null -w ''%{http_code}'' http://$HTTP_SERVER_ADDRESS/ping)" != "200" ]]; 
-		    do sleep 1;
-		done
-	fi
-
-	if [ -n "$GC" ];
-	then
-		echo "Forcing $APP_DIR GC"
-		if [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://$HTTP_SERVER_ADDRESS/gc)" != "200" ]];
-		then
-			echo "Unable to force GC, please check your application"
-			exit 1
-		fi
-	fi
-
-	echo "Dumping $APP_DIR App"
-	criu dump -t $APP_PID -vvv -o dump.log
-	DUMP_EXIT_STATUS=$?
-	if [ $DUMP_EXIT_STATUS -ne 0 ];
-	then
-		echo "Dump App $APP_DIR failed"
-		exit 1
-	fi
-
-	cd -
+	bash $criu_builder "dump" $APP_DIR $HTTP_SERVER_ADDRESS $CRIU_APP_OUTPUT -scale=0.1 -image_path=$IMAGE_PATH -sfjar=$SF_JAR_PATH -warm=$WARM_REQ
 }
 
-if [ "$HANDLER_TYPE" != "criu" ];
-then
-	cd $APP_DIR
+build_default_app() {
+	if [ $RUNTIME == "java" ];
+	then
+		cd $APP_DIR
 
-	echo "Building $APP_DIR App to Jar [$JAR_PATH]"
-	mvn install
+		echo "Building $APP_DIR App to Jar"
+		mvn install
 
-	cd -
-fi
-
+		cd -
+	fi
+	
+}
 
 echo "Building experiment"
 EXP_APP_NAME="execute-requests"
@@ -136,7 +92,7 @@ cd -
 echo "Starting experiment"
 
 CURRENT_TS=$(date +%s)
-RESULTS_FILENAME=$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$GC-$WARM_REQ-$SF_JAR_NAME.csv
+RESULTS_FILENAME=$TYPE_DIR-$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$WARM_REQ-$SF_JAR_NAME.csv
 
 echo "Number of executions [$REP_EXEC]"
 echo "Number of requests [$REP_REQ]"
@@ -144,7 +100,7 @@ echo "Results filename [$RESULTS_FILENAME]"
 
 echo "Metric,ExecID,ReqID,KernelTime_NS" > $RESULTS_FILENAME
 
-BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$GC-$WARM_REQ-$SF_JAR_NAME-BPFTRACE.out
+BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$WARM_REQ-$SF_JAR_NAME-BPFTRACE.out
 run_bpftrace() {
 	if [ -n "$TRACER_DIR" ];
 	then 
@@ -197,48 +153,41 @@ do
 			if [ $HANDLER_TYPE == "criu" ];
 			then
 				echo "HTTP Server CRIU Handler"
-				dump_criu_app
+				build_criu_app
 
 				BPFTRACER_PID=$( run_bpftrace )
 
 				echo "Running execute requests script"
 				set +e
-				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $APP_DIR $HANDLER_TYPE $APP_DIR/$CRIU_APP_OUTPUT >> $RESULTS_FILENAME
+				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $RUNTIME $APP_DIR $HANDLER_TYPE $APP_DIR/$CRIU_APP_OUTPUT >> $RESULTS_FILENAME
 				EXECUTION_SUCCESS=$?
+				EXECUTOR_PID=$!
 
 				echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
 
 				echo "Trying to kill HTTP Server Handler process"
-				killall -v java
+				killall -v $RUNTIME
 				set -e
 
 				parse_bpftrace $i $EXECUTION_SUCCESS $BPFTRACER_PID
-
-				truncate --size=0 $APP_DIR/$CRIU_APP_OUTPUT
 			else
 				echo "HTTP Server Handler"
+				build_default_app
 
 				BPFTRACER_PID=$( run_bpftrace )
 
 				echo "Running execute requests script"
-				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $JAR_PATH $HANDLER_TYPE $SF_JAR_PATH >> $RESULTS_FILENAME
+				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $RUNTIME $APP_DIR $HANDLER_TYPE $SF_JAR_PATH >> $RESULTS_FILENAME
 				EXECUTION_SUCCESS=$?
 
 				echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
+				echo "Trying to kill HTTP Server Handler process"
+				set +e
+				killall -v $RUNTIME
+				set -e
 
 				parse_bpftrace $i $EXECUTION_SUCCESS $BPFTRACER_PID
 			fi
-		elif [ $TYPE_DIR == "std-server-handler" ]
-		then
-			echo "STD Handler of Type [$HANDLER_TYPE]"
-			set +e
-			
-			scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $REP_REQ $JAR_PATH $i $HANDLER_TYPE >> $RESULTS_FILENAME
-			EXECUTION_SUCCESS=$?
-
-			echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
-
-			set -e
 		else
 			echo "Could not identify the experiment type [$TYPE_DIR]"
 			exit -1
