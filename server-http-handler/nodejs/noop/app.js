@@ -12,7 +12,18 @@ const port = 9000
 const ip = 'localhost'
 
 const server = http.createServer((req, res) => {
-	handler.handle(getNanoRealTime, req, res).end()
+	const isWarmReq = req.headers['x-warm-request'] == true;
+	if (!isWarmReq) {
+		console.log('T4: ' + getNanoRealTime())
+	}
+	handler.handle(req, res)
+		.then((res) => {
+			if (!isWarmReq) {
+				console.log('T6: ' + getNanoRealTime())
+			}
+			res.end()
+		})
+	
 }).listen(port, ip)
 
 console.log('EFM: ' + getNanoRealTime())

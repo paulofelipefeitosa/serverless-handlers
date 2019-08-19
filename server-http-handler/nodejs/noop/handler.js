@@ -1,8 +1,6 @@
-module.exports = {
-	handle: function(getTimestamp, req, res) {
-		console.log('T4: ' + getTimestamp())
-		res.writeHead(200);
-		console.log('T6: ' + getTimestamp())
-		return res
-	}
+function handle(req, res) {
+	res.writeHead(200);
+	return res
 }
+
+module.exports.handle = handle;
