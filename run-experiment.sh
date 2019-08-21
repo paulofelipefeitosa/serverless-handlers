@@ -63,12 +63,21 @@ build_criu_app() {
 build_default_app() {
 	if [ $RUNTIME == "java" ];
 	then
+		set +e
+		killall -v java
+		set -e
+
 		cd $APP_DIR
 
 		echo "Building $APP_DIR App to Jar"
 		mvn install
 
 		cd -
+	elif [ $RUNTIME == "nodejs" ];
+	then
+		set +e
+		killall -v node
+		set -e
 	fi
 	
 }
@@ -88,7 +97,7 @@ cd -
 echo "Starting experiment"
 
 CURRENT_TS=$(date +%s)
-RESULTS_FILENAME=$TYPE_DIR-$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$WARM_REQ-$SF_JAR_NAME.csv
+RESULTS_FILENAME=$TYPE_DIR-$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$WARM_REQ-$SF_JAR_NAME-$TRACER_DIR.csv
 
 echo "Number of executions [$REP_EXEC]"
 echo "Number of requests [$REP_REQ]"
@@ -160,9 +169,6 @@ do
 				EXECUTOR_PID=$!
 
 				echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
-
-				echo "Trying to kill HTTP Server Handler process"
-				killall -v $RUNTIME
 				set -e
 
 				parse_bpftrace $i $EXECUTION_SUCCESS $BPFTRACER_PID
@@ -177,10 +183,6 @@ do
 				EXECUTION_SUCCESS=$?
 
 				echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
-				echo "Trying to kill HTTP Server Handler process"
-				set +e
-				killall -v $RUNTIME
-				set -e
 
 				parse_bpftrace $i $EXECUTION_SUCCESS $BPFTRACER_PID
 			fi
