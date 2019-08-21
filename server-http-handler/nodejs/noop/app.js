@@ -1,6 +1,7 @@
-const handler = require('./handler.js')
 const process = require('process')
 console.log('EIM: ' + getNanoRealTime())
+
+const handler = require('./handler.js')
 
 function getNanoRealTime() {
 	timestamps = process.hrtime()
