@@ -9,9 +9,23 @@ def get_monotonic_clock():
 class RequestHandler(BaseHTTPRequestHandler):
 
     def handle_request(self, req_type):
-        print('T4: %d' % get_monotonic_clock())
-        handler.handle(Request(self, req_type))
-        print('T6: %d' % get_monotonic_clock())
+        request = Request(self, req_type)
+        warm_req = request.get_header('x-warm-request') == 'true'
+        if not warm_req:
+            print('T4: %d' % get_monotonic_clock())
+        
+        response = handler.handle(request)
+        
+        self.send_response(response.status_code)
+        if response.content_type:
+            self.send_header('Content-type', response.content_type)
+        for key, value in response.headers.items():
+            self.send_header(key, value)
+        self.end_headers()
+        self.wfile.write(response.body.encode(response.body_encoding))
+
+        if not warm_req:
+            print('T6: %d' % get_monotonic_clock())
 
     def do_GET(self):
         self.handle_request(RequestType.GET)
