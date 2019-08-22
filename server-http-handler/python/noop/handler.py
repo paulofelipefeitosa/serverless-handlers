@@ -1,3 +1,4 @@
+from utils.http_entities import Response
 
 def handle(request):
-	print(request.get_header('teste'))
+	return Response()
