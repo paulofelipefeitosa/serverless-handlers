@@ -1,15 +1,9 @@
 # Thumbnail Maker HTTP Server
 
-## Install
-
-```bash
-npm install
-```
-
 ## Run
 
 ```bash
-scale=0.1 image_path=BhlDUOR.jpg node app.js
+scale=0.1 image_path=BhlDUOR.jpg python3 app.py
 ```
 
 ## Requests
