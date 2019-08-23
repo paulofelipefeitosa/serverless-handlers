@@ -42,6 +42,8 @@ func startDefaultServer(runtime string, appDir string, args string) (*exec.Cmd, 
 		upServerCmd = exec.Command("java", "-jar", fmt.Sprintf("%s/target/app-0.0.1-SNAPSHOT.jar", appDir), args)
 	} else if runtime == "nodejs" {
 		upServerCmd = exec.Command("node", fmt.Sprintf("%s/app.js", appDir), args)
+	} else if runtime == "python" {
+		upServerCmd = exec.Command("python3", "-u", fmt.Sprintf("%s/app.py", appDir), args)
 	}
 	upServerCmd.Env = os.Environ()
 	

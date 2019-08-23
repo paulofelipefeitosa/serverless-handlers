@@ -11,25 +11,25 @@ HANDLER_TYPE=$7 # criu or no-criu
 for i in "$@"
 do
 	case $i in
-	    -t=*|--tracer_dir=*) # Tracer directory
-	    TRACER_DIR="${i#*=}"
-	    shift # past argument=value
-	    ;;
-	    -t_eb=*|--tracer_executor_binary=*) # Tracer executor binary path
-	    TRACER_EB="${i#*=}"
-	    shift # past argument=value
-	    ;;
-	    -sfjar=*|--sf_jar_name=*) # Synthetic Function Jar Path
-	    SF_JAR_PATH="${i#*=}"
-	    shift # past argument=value
-	    ;;
-	    -warm|--warm_req) # Enable warm request
-	    WARM_REQ=YES
-	    shift # past argument with no value
-	    ;;
-	    *)
-	          # unknown option
-	    ;;
+		-t=*|--tracer_dir=*) # Tracer directory
+		TRACER_DIR="${i#*=}"
+		shift # past argument=value
+		;;
+		-t_eb=*|--tracer_executor_binary=*) # Tracer executor binary path
+		TRACER_EB="${i#*=}"
+		shift # past argument=value
+		;;
+		-sfjar=*|--sf_jar_name=*) # Synthetic Function Jar Path
+		SF_JAR_PATH="${i#*=}"
+		shift # past argument=value
+		;;
+		-warm|--warm_req) # Enable warm request
+		WARM_REQ=YES
+		shift # past argument with no value
+		;;
+		*)
+			  # unknown option
+		;;
 	esac
 done
 
@@ -47,6 +47,9 @@ build_criu_app() {
 	then
 		criu_builder=$TYPE_DIR/$RUNTIME/java-criu-builder.sh
 	elif [ $RUNTIME == "nodejs" ];
+	then
+		criu_builder=$TYPE_DIR/$RUNTIME/nodejs-criu-builder.sh
+	elif [ $RUNTIME == "python" ];
 	then
 		criu_builder=$TYPE_DIR/$RUNTIME/nodejs-criu-builder.sh
 	fi
@@ -77,6 +80,11 @@ build_default_app() {
 	then
 		set +e
 		killall -v node
+		set -e
+	elif [ $RUNTIME == "python" ]
+	then
+		set +e
+		killall -v python3
 		set -e
 	fi
 	
