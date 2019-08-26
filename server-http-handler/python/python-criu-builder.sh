@@ -8,7 +8,7 @@ then
 	echo "Build Python App"
 	cd $APP_DIR
 
-	echo "Remove any previous dump files or nodejs app"
+	echo "Remove any previous dump files or python app"
 	set +e
 	rm *.img
 	killall -v python3
@@ -43,7 +43,8 @@ then
 		esac
 	done
 	truncate --size=0 $CRIU_APP_OUTPUT
-	scale=$SCALE image_path=$IMAGE_PATH setsid python3 -u app.py < /dev/null &> $CRIU_APP_OUTPUT &
+	truncate --size=0 app.err
+	scale=$SCALE image_path=$IMAGE_PATH setsid python3 -u app.py < /dev/null > $CRIU_APP_OUTPUT 2> app.err &
 
 	APP_PID=$(pgrep python3)
 	echo "Python App PID [$APP_PID]"
