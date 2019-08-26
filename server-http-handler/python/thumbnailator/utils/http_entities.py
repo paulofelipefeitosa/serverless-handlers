@@ -58,7 +58,7 @@ class Response(object):
         self.content_type = content_type
 
     def set_body(self, body, encoding="UTF-8"):
-        self.body = body
+        self.body += body
         self.body_encoding = encoding
 
     def __close__(self, request):

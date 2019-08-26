@@ -10,7 +10,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def handle_request(self, req_type):
         request = Request(self, req_type)
-        warm_req = request.get_header('x-warm-request') == 'true'
+        warm_req = request.get_header('X-Warm-Request') == 'true'
         if not warm_req:
             print('T4: %d' % get_monotonic_clock())
         
