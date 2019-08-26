@@ -42,6 +42,8 @@ func startDefaultServer(runtime string, appDir string, args string) (*exec.Cmd, 
 		upServerCmd = exec.Command("java", "-jar", fmt.Sprintf("%s/target/app-0.0.1-SNAPSHOT.jar", appDir), args)
 	} else if runtime == "nodejs" {
 		upServerCmd = exec.Command("node", fmt.Sprintf("%s/app.js", appDir), args)
+	} else if runtime == "python" {
+		upServerCmd = exec.Command("python3", "-u", fmt.Sprintf("%s/app.py", appDir), args)
 	}
 	upServerCmd.Env = os.Environ()
 	
@@ -189,6 +191,8 @@ func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverStdou
 	for i := int64(1); i < nRequests; i++ {
 		response, err, sendRequestNanoTS, receiveResponseNanoTS := sendRequest2(functionURL)
 		if err == nil && response.StatusCode == http.StatusOK {
+			defer response.Body.Close()
+			io.Copy(ioutil.Discard, response.Body)
 			var startServiceNanoTS, endServiceNanoTS int64
 			fmt.Fscanf(serverStdout, "T4: %d", &startServiceNanoTS)
 			fmt.Fscanf(serverStdout, "T6: %d", &endServiceNanoTS)
@@ -196,7 +200,17 @@ func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverStdou
 			roundTripTime = append(roundTripTime, receiveResponseNanoTS - sendRequestNanoTS)
 			serviceTime = append(serviceTime, endServiceNanoTS - startServiceNanoTS)
 		} else {
-			log.Fatal(err)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer response.Body.Close()
+			respBody, err := ioutil.ReadAll(response.Body)
+			if err == nil {
+				log.Fatalf("Server is up, but HTTP response is not OK! StatusCode: %d, Request Response: %s\n", response.StatusCode, respBody)
+			} else {
+				log.Printf("Server is up, but HTTP response is not OK! StatusCode: %d\n", response.StatusCode)
+				log.Fatal(err)
+			}
 		}
 	}
 	return roundTripTime, serviceTime
@@ -209,9 +223,9 @@ func getHTTPServerReadyAndServiceTS(functionURL string, serverStdout io.ReadClos
 	for {
 		resp, err := http.Get(functionURL)
 		if err == nil  {
+			defer resp.Body.Close()
 			if resp.StatusCode == http.StatusOK {
 				io.Copy(ioutil.Discard, resp.Body)
-				resp.Body.Close()
 				fmt.Fscanf(serverStdout, "EIM: %d", &reqStatsNS[0])
 				fmt.Fscanf(serverStdout, "EFM: %d", &reqStatsNS[1])
 				fmt.Fscanf(serverStdout, "T4: %d", &reqStatsNS[2])
@@ -224,7 +238,11 @@ func getHTTPServerReadyAndServiceTS(functionURL string, serverStdout io.ReadClos
 				}
 				return reqStatsNS, nil
 			} else {
-				return reqStatsNS, fmt.Errorf("Server is up, but HTTP response is not OK!\nStatusCode: %d\n", resp.StatusCode)
+				respBody, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					return reqStatsNS, err
+				}
+				return reqStatsNS, fmt.Errorf("Server is up, but HTTP response is not OK! StatusCode: %d, Request Response: %s\n", resp.StatusCode, respBody)
 			}
 		} else {
 			time.Sleep(5 * time.Millisecond)
@@ -240,9 +258,5 @@ func sendRequest2(URL string) (*http.Response, error, int64, int64) {
 	sendRequestNanoTS := Now()
 	response, err := http.Get(URL)
 	receiveResponseNanoTS := Now()
-	if err == nil && response.Body != nil {
-		io.Copy(ioutil.Discard, response.Body)
-		response.Body.Close()
-	}
 	return response, err, sendRequestNanoTS, receiveResponseNanoTS
 }

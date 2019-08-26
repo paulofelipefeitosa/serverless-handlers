@@ -11,25 +11,25 @@ HANDLER_TYPE=$7 # criu or no-criu
 for i in "$@"
 do
 	case $i in
-	    -t=*|--tracer_dir=*) # Tracer directory
-	    TRACER_DIR="${i#*=}"
-	    shift # past argument=value
-	    ;;
-	    -t_eb=*|--tracer_executor_binary=*) # Tracer executor binary path
-	    TRACER_EB="${i#*=}"
-	    shift # past argument=value
-	    ;;
-	    -sfjar=*|--sf_jar_name=*) # Synthetic Function Jar Path
-	    SF_JAR_PATH="${i#*=}"
-	    shift # past argument=value
-	    ;;
-	    -warm|--warm_req) # Enable warm request
-	    WARM_REQ=YES
-	    shift # past argument with no value
-	    ;;
-	    *)
-	          # unknown option
-	    ;;
+		-t=*|--tracer_dir=*) # Tracer directory
+		TRACER_DIR="${i#*=}"
+		shift # past argument=value
+		;;
+		-t_eb=*|--tracer_executor_binary=*) # Tracer executor binary path
+		TRACER_EB="${i#*=}"
+		shift # past argument=value
+		;;
+		-sfjar=*|--sf_jar_name=*) # Synthetic Function Jar Path
+		SF_JAR_PATH="${i#*=}"
+		shift # past argument=value
+		;;
+		-warm|--warm_req) # Enable warm request
+		WARM_REQ=YES
+		shift # past argument with no value
+		;;
+		*)
+			  # unknown option
+		;;
 	esac
 done
 
@@ -37,6 +37,11 @@ APP_DIR=$TYPE_DIR/$RUNTIME/$APP_NAME
 if [ -n "$SF_JAR_PATH" ];
 then
 	SF_JAR_NAME=$(basename $SF_JAR_PATH)
+fi
+
+if [ -n "$TRACER_DIR" ];
+then
+	BPFTRACE_EXEC="YES"
 fi
 
 HTTP_SERVER_ADDRESS=localhost:9000
@@ -49,6 +54,9 @@ build_criu_app() {
 	elif [ $RUNTIME == "nodejs" ];
 	then
 		criu_builder=$TYPE_DIR/$RUNTIME/nodejs-criu-builder.sh
+	elif [ $RUNTIME == "python" ];
+	then
+		criu_builder=$TYPE_DIR/$RUNTIME/python-criu-builder.sh
 	fi
 
 	echo "Building $APP_DIR App"
@@ -78,6 +86,11 @@ build_default_app() {
 		set +e
 		killall -v node
 		set -e
+	elif [ $RUNTIME == "python" ]
+	then
+		set +e
+		killall -v python3
+		set -e
 	fi
 	
 }
@@ -97,7 +110,7 @@ cd -
 echo "Starting experiment"
 
 CURRENT_TS=$(date +%s)
-RESULTS_FILENAME=$TYPE_DIR-$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$WARM_REQ-$SF_JAR_NAME-$TRACER_DIR.csv
+RESULTS_FILENAME=$TYPE_DIR-$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$WARM_REQ-$SF_JAR_NAME-$BPFTRACE_EXEC.csv
 
 echo "Number of executions [$REP_EXEC]"
 echo "Number of requests [$REP_REQ]"
@@ -142,7 +155,9 @@ parse_bpftrace() {
 			do
 				sleep 1
 			done
+			set +e
 			python -u $TRACER_DIR/execve-clone-parser-bpftrace.py $EXECID < $BPFTRACE_OUT >> $RESULTS_FILENAME
+			set -e
 		fi
 	fi
 }
