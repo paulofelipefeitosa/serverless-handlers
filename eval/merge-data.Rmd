@@ -1,0 +1,232 @@
+---
+title: "Merge Data"
+author: "Paulo Feitosa"
+date: "August 28, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(dplyr)
+```
+
+## Pure Startup
+
+### Java
+
+```{r JavaPureStartup}
+nocriu_nobpf_nowarm_java <- read.csv("java/nocriu_nobpftrace_nogc_nowarmup.csv")
+nocriu_nobpf_nowarm_java$Runtime <- "Java"
+nocriu_nobpf_nowarm_java$Technique <- "Vanilla"
+
+criu_nobpf_nowarm_java <- read.csv("java/criu_nobpftrace_nogc_nowarmup.csv")
+criu_nobpf_nowarm_java$Runtime <- "Java"
+criu_nobpf_nowarm_java$Technique <- "Prebaking"
+
+criu_nobpf_warm_java <- read.csv("java/criu_nobpftrace_nogc_warmup.csv")
+criu_nobpf_warm_java$Runtime <- "Java"
+criu_nobpf_warm_java$Technique <- "Prebaking Warm"
+
+java_nobpf <- rbind(nocriu_nobpf_nowarm_java, criu_nobpf_nowarm_java, criu_nobpf_warm_java)
+```
+
+### NodeJS
+
+#### NoOp
+
+```{r NodeJSNOOPPureStartup}
+nocriu_nobpf_nowarm_node_noop <- read.csv("node/server-http-handler-nodejs-no-criu-noop-1566334496-300-300--.csv")
+nocriu_nobpf_nowarm_node_noop$App <- "NoOp"
+nocriu_nobpf_nowarm_node_noop$Runtime <- "NodeJS"
+nocriu_nobpf_nowarm_node_noop$Technique <- "Vanilla"
+
+criu_nobpf_nowarm_node_noop <- read.csv("node/server-http-handler-nodejs-criu-noop-1566338922-300-300--.csv")
+criu_nobpf_nowarm_node_noop$App <- "NoOp"
+criu_nobpf_nowarm_node_noop$Runtime <- "NodeJS"
+criu_nobpf_nowarm_node_noop$Technique <- "Prebaking"
+
+criu_nobpf_warm_node_noop <- read.csv("node/server-http-handler-nodejs-criu-noop-1566335023-300-300-YES-.csv")
+criu_nobpf_warm_node_noop$App <- "NoOp"
+criu_nobpf_warm_node_noop$Runtime <- "NodeJS"
+criu_nobpf_warm_node_noop$Technique <- "Prebaking Warm"
+```
+
+#### Thumbnailator
+
+```{r NodeJSThumbPureStartup}
+nocriu_nobpf_nowarm_node_thumb <- read.csv("node/server-http-handler-nodejs-no-criu-thumbnailator-1566334552-300-300--.csv")
+nocriu_nobpf_nowarm_node_thumb$App <- "Thumbnailator"
+nocriu_nobpf_nowarm_node_thumb$Runtime <- "NodeJS"
+nocriu_nobpf_nowarm_node_thumb$Technique <- "Vanilla"
+
+criu_nobpf_nowarm_node_thumb <- read.csv("node/server-http-handler-nodejs-criu-thumbnailator-1566339435-300-300--.csv")
+criu_nobpf_nowarm_node_thumb$App <- "Thumbnailator"
+criu_nobpf_nowarm_node_thumb$Runtime <- "NodeJS"
+criu_nobpf_nowarm_node_thumb$Technique <- "Prebaking"
+
+criu_nobpf_warm_node_thumb <- read.csv("node/server-http-handler-nodejs-criu-thumbnailator-1566336452-300-300-YES-.csv")
+criu_nobpf_warm_node_thumb$App <- "Thumbnailator"
+criu_nobpf_warm_node_thumb$Runtime <- "NodeJS"
+criu_nobpf_warm_node_thumb$Technique <- "Prebaking Warm"
+```
+
+```{r mergeNodeJs}
+node_nobpf <- rbind(nocriu_nobpf_nowarm_node_noop, nocriu_nobpf_nowarm_node_thumb, criu_nobpf_nowarm_node_noop, criu_nobpf_nowarm_node_thumb, criu_nobpf_warm_node_noop, criu_nobpf_warm_node_thumb)
+```
+
+### Python
+
+#### NoOp
+
+```{r PythonNOOPPureStartup}
+nocriu_nobpf_nowarm_python_noop <- read.csv("python/server-http-handler-python-no-criu-noop-1566847934-300-300---.csv")
+nocriu_nobpf_nowarm_python_noop$App <- "NoOp"
+nocriu_nobpf_nowarm_python_noop$Runtime <- "Python"
+nocriu_nobpf_nowarm_python_noop$Technique <- "Vanilla"
+
+criu_nobpf_nowarm_python_noop <- read.csv("python/server-http-handler-python-criu-noop-1566854641-300-300---.csv")
+criu_nobpf_nowarm_python_noop$App <- "NoOp"
+criu_nobpf_nowarm_python_noop$Runtime <- "Python"
+criu_nobpf_nowarm_python_noop$Technique <- "Prebaking"
+
+criu_nobpf_warm_python_noop <- read.csv("python/server-http-handler-python-criu-noop-1566850924-300-300-YES--.csv")
+criu_nobpf_warm_python_noop$App <- "NoOp"
+criu_nobpf_warm_python_noop$Runtime <- "Python"
+criu_nobpf_warm_python_noop$Technique <- "Prebaking Warm"
+```
+
+#### Thumbnailator
+
+```{r PythonThumbPureStartup}
+nocriu_nobpf_nowarm_python_thumb <- read.csv("python/server-http-handler-python-no-criu-thumbnailator-1566848254-300-300---.csv")
+nocriu_nobpf_nowarm_python_thumb$App <- "Thumbnailator"
+nocriu_nobpf_nowarm_python_thumb$Runtime <- "Python"
+nocriu_nobpf_nowarm_python_thumb$Technique <- "Vanilla"
+
+criu_nobpf_nowarm_python_thumb <- read.csv("python/server-http-handler-python-criu-thumbnailator-1566855029-300-300---.csv")
+criu_nobpf_nowarm_python_thumb$App <- "Thumbnailator"
+criu_nobpf_nowarm_python_thumb$Runtime <- "Python"
+criu_nobpf_nowarm_python_thumb$Technique <- "Prebaking"
+
+criu_nobpf_warm_python_thumb <- read.csv("python/server-http-handler-python-criu-thumbnailator-1566851477-300-300-YES--.csv")
+criu_nobpf_warm_python_thumb$App <- "Thumbnailator"
+criu_nobpf_warm_python_thumb$Runtime <- "Python"
+criu_nobpf_warm_python_thumb$Technique <- "Prebaking Warm"
+```
+
+```{r mergePython}
+python_nobpf <- rbind(nocriu_nobpf_nowarm_python_noop, nocriu_nobpf_nowarm_python_thumb, criu_nobpf_nowarm_python_noop, criu_nobpf_nowarm_python_thumb, criu_nobpf_warm_python_noop, criu_nobpf_warm_python_thumb)
+```
+
+```{r finalmerge}
+nobpf_startup <- rbind(java_nobpf, 
+                       node_nobpf %>%
+                         rename("Value_NS" = "KernelTime_NS"), 
+                       python_nobpf %>%
+                         rename("Value_NS" = "KernelTime_NS"))
+write.csv(nobpf_startup, 
+  file = "startup_nobpftrace.csv",
+  row.names = FALSE)
+```
+
+## Bpftrace Startup
+
+### Java
+
+```{r java_bpfstartup}
+nocriu_bpf_nowarm_java <- read.csv("java/nocriu_newbpftrace_nogc_nowarmup.csv")
+nocriu_bpf_nowarm_java$Runtime <- "Java"
+nocriu_bpf_nowarm_java$Technique <- "Vanilla"
+
+criu_bpf_nowarm_java <- read.csv("java/criu_bpftrace_nogc_nowarmup.csv")
+criu_bpf_nowarm_java$Runtime <- "Java"
+criu_bpf_nowarm_java$Technique <- "Prebaking"
+
+criu_bpf_warm_java <- read.csv("java/criu_bpftrace_gc_warmup.csv")
+criu_bpf_warm_java$Runtime <- "Java"
+criu_bpf_warm_java$Technique <- "Prebaking Warm"
+
+java_bpf <- rbind(nocriu_bpf_nowarm_java, criu_bpf_nowarm_java, criu_bpf_warm_java)
+```
+
+### NodeJS
+
+#### NoOp
+
+```{r NodeJSNOOP_bpfstartup}
+nocriu_bpf_nowarm_node_noop <- read.csv("node/server-http-handler-nodejs-no-criu-noop-1566340457-300-300---bpftrace.csv")
+nocriu_bpf_nowarm_node_noop$App <- "NoOp"
+nocriu_bpf_nowarm_node_noop$Runtime <- "NodeJS"
+nocriu_bpf_nowarm_node_noop$Technique <- "Vanilla"
+
+criu_bpf_warm_node_noop <- read.csv("node/server-http-handler-nodejs-criu-noop-1566342218-300-300-YES--bpftrace.csv")
+criu_bpf_warm_node_noop$App <- "NoOp"
+criu_bpf_warm_node_noop$Runtime <- "NodeJS"
+criu_bpf_warm_node_noop$Technique <- "Prebaking Warm"
+```
+
+#### Thumbnailator
+
+```{r NodeJSThumb_bpfstartup}
+nocriu_bpf_nowarm_node_thumb <- read.csv("node/server-http-handler-nodejs-no-criu-thumbnailator-1566341128-300-300---bpftrace.csv")
+nocriu_bpf_nowarm_node_thumb$App <- "Thumbnailator"
+nocriu_bpf_nowarm_node_thumb$Runtime <- "NodeJS"
+nocriu_bpf_nowarm_node_thumb$Technique <- "Vanilla"
+
+criu_bpf_warm_node_thumb <- read.csv("node/server-http-handler-nodejs-criu-thumbnailator-1566344628-300-300-YES--bpftrace.csv")
+criu_bpf_warm_node_thumb$App <- "Thumbnailator"
+criu_bpf_warm_node_thumb$Runtime <- "NodeJS"
+criu_bpf_warm_node_thumb$Technique <- "Prebaking Warm"
+```
+
+```{r mergeNodeJs_bpfstartup}
+node_bpf <- rbind(nocriu_bpf_nowarm_node_noop, nocriu_bpf_nowarm_node_thumb, criu_bpf_warm_node_noop, criu_bpf_warm_node_thumb)
+```
+
+### Python
+
+#### NoOp
+
+```{r PythonNOOP_bpfstartup}
+nocriu_bpf_nowarm_python_noop <- read.csv("python/server-http-handler-python-no-criu-noop-1566857877-300-300---YES.csv")
+nocriu_bpf_nowarm_python_noop$App <- "NoOp"
+nocriu_bpf_nowarm_python_noop$Runtime <- "Python"
+nocriu_bpf_nowarm_python_noop$Technique <- "Vanilla"
+
+criu_bpf_warm_python_noop <- read.csv("python/server-http-handler-python-criu-noop-1566861856-300-300-YES--YES.csv")
+criu_bpf_warm_python_noop$App <- "NoOp"
+criu_bpf_warm_python_noop$Runtime <- "Python"
+criu_bpf_warm_python_noop$Technique <- "Prebaking Warm"
+```
+
+#### Thumbnailator
+
+```{r PythonThumb_bpfstartup}
+nocriu_bpf_nowarm_python_thumb <- read.csv("python/server-http-handler-python-no-criu-thumbnailator-1566858574-300-300---YES.csv")
+nocriu_bpf_nowarm_python_thumb$App <- "Thumbnailator"
+nocriu_bpf_nowarm_python_thumb$Runtime <- "Python"
+nocriu_bpf_nowarm_python_thumb$Technique <- "Vanilla"
+
+criu_bpf_warm_python_thumb <- read.csv("python/server-http-handler-python-criu-thumbnailator-1566863030-300-300-YES--YES.csv")
+criu_bpf_warm_python_thumb$App <- "Thumbnailator"
+criu_bpf_warm_python_thumb$Runtime <- "Python"
+criu_bpf_warm_python_thumb$Technique <- "Prebaking Warm"
+```
+
+```{r mergePython_bpfstartup}
+python_bpf <- rbind(nocriu_bpf_nowarm_python_noop, nocriu_bpf_nowarm_python_thumb, criu_bpf_warm_python_noop, criu_bpf_warm_python_thumb)
+```
+
+```{r merge_bpfstartup}
+startup_bpftrace <- rbind(java_bpf, 
+                          node_bpf %>% 
+                            rename("Value_NS" = "KernelTime_NS") %>%
+                            filter(ReqID < 2), 
+                          python_bpf %>% 
+                            rename("Value_NS" = "KernelTime_NS") %>%
+                            filter(ReqID < 2))
+
+write.csv(startup_bpftrace, 
+  file = "startup_bpftrace.csv",
+  row.names = FALSE)
+```
