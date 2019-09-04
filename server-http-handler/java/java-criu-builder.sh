@@ -8,15 +8,15 @@ then
 	echo "Build Java App"
 	cd $APP_DIR
 
-	echo "Remove any previous dump files or java app"
+	echo "Remove any previous dump files"
 	set +e
 	rm *.img
-	killall -v java
 	set -e
 
 	mvn install
 	cd -
 elif [ $TYPE == "dump" ];
+then
 	echo "Dump Java App"
 	cd $APP_DIR
 
@@ -47,7 +47,7 @@ elif [ $TYPE == "dump" ];
 		esac
 	done
 	truncate --size=0 $CRIU_APP_OUTPUT
-	scale=$SCALE image_path=$IMAGE_PATH setsid java -jar $APP_DIR/target/app-0.0.1-SNAPSHOT.jar $SF_JAR_PATH < /dev/null &> $CRIU_APP_OUTPUT &
+	scale=$SCALE image_path=$IMAGE_PATH setsid java -jar target/app-0.0.1-SNAPSHOT.jar $SF_JAR_PATH < /dev/null &> $CRIU_APP_OUTPUT &
 
 	APP_PID=$(pgrep java)
 	echo "Java App PID [$APP_PID]"
