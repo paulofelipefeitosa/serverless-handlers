@@ -48,7 +48,7 @@ HTTP_SERVER_ADDRESS=localhost:9000
 CRIU_APP_OUTPUT=app.log
 
 clean_env() {
-	echo "Any $1 runtime apps"
+	echo "Killing any conflicting app"
 	set +e
 	killall -v -w node python3 java
 	set -e
