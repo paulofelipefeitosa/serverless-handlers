@@ -92,40 +92,194 @@ ggplot(rbind(pb, vanilla), aes(type, value, color=type)) +
 ggsave("startup_cmp_nowarmup.png")
 ```
 
-```{r bpftrace_data_treatment, fig.width=7, fig.height=5}
-require(dplyr)
+```{r multiple_startup_cmp, fig.width=7, fig.height=5}
+# Metrics:
+# RuntimeReadyTime -> time between the start of the function and until it is ready to start serving requests.
+# ExecID -> Treatment replica ID
+# ReqID -> ID of the request within the treatment replica (0 meaning the first request)
 
-read_bpftrace_pure_data <- function(f, app_name) {
-  df <- read.csv(f)
-  df$App <- app_name
-  df <- df %>% rename(Value_NS = KernelTime_NS)
-  
-  clone <- df[which(df$Metric == "CloneEntry"), ]
-  clone$Value_NS <- df[which(df$Metric == "CloneExit"), ]$Value_NS - clone$Value_NS
-  clone$Metric <- "CloneTime"
-  
-  exec <- df[which(df$Metric == "CloneExit"), ]
-  exec$Value_NS <- df[which(df$Metric == "ExecveExit"), ]$Value_NS - exec$Value_NS
-  exec$Metric <- "ExecTime"
-  
-  runtime <- df[which(df$Metric == "ExecveExit"), ]
-  runtime$Value_NS <- df[which(df$Metric == "MainEntry"), ]$Value_NS - runtime$Value_NS
-  runtime$Metric <- "RuntimeTime"
-  
-  appinit <- df[which(df$Metric == "MainEntry"), ]
-  appinit$Value_NS <- df[which(df$Metric == "Ready2Serve"), ]$Value_NS - appinit$Value_NS
-  appinit$Metric <- "InitializationTime"
-  
-  return(rbind(clone, exec, runtime, appinit))
+require(dplyr)
+require(ggplot2)
+require(ggpubr)
+library(boot)
+
+# Reading data
+read_startup <- function(f) {
+  df <- read.csv(f) 
+  df <- df %>% filter(Metric == "RuntimeReadyTime" & ReqID == 0) %>% rename("Value" = "Value_NS")
+  df$Value <- df$Value / 10^6 
+  #df <- df %>% mutate(app = ifelse(app == "NOOP", "NoOp", "Thumbnail Maker"))
+  return(df)
 }
 
-nocriu_newbpftrace_nogc_nowarmup <- 
-  rbind(read_bpftrace_pure_data('../server-http-handler-noop-1565746178-1000-1---.csv', "NOOP"),
-        read_bpftrace_pure_data('../server-http-handler-thumbnailator-1565727388-1000-1---.csv', "Thumbnail Maker"))
+pure_startup <- read_startup("python_startup_nobpftrace.csv")
 
-write.csv(nocriu_newbpftrace_nogc_nowarmup, 
-  file = "nocriu_newbpftrace_nogc_nowarmup.csv",
-  row.names = FALSE)
+# Graphing
+p <- c("yellowgreen", "violetred4")  # from viridis color pallete.
+cOff <- p[1]
+cOn <- p[2]
+ggplot(pure_startup, aes(factor(Technique, c("Vanilla", "Prebaking", "Prebaking Warm")), Value, colour=App)) +
+  geom_jitter(alpha=0.3) +
+  #stat_summary(fun.data = median_cl_boot, geom = "errorbar") +
+  #stat_summary(fun.data = median_ci_text, geom = "text", size=3.5)  +
+  facet_wrap(~Runtime) +
+  #theme_pubclean() +
+  scale_color_manual(values=p) +
+  scale_y_continuous(limits = c(0, max(pure_startup$Value)+20), breaks = seq(0, max(pure_startup$Value), by = 200)) +
+  labs(x="Technique", y="Startup time (ms)")+
+  theme(
+    #legend.position="none",
+    axis.title.x=element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
+
+ggsave("python_startup_cmp.png")
+```
+
+```{r multiple_latency_cmp, fig.width=7, fig.height=5}
+# Metrics:
+# RuntimeReadyTime -> time between the start of the function and until it is ready to start serving requests.
+# ExecID -> Treatment replica ID
+# ReqID -> ID of the request within the treatment replica (0 meaning the first request)
+
+# Reading data
+read_latency <- function(f) {
+  df <- read.csv(f) 
+  df <- df %>% filter((Metric == "LatencyTime" | Metric == "Latency") & ReqID == 0) %>% rename("Value" = "Value_NS")
+  df$Value <- df$Value / 10^6 
+  #df <- df %>% mutate(app = ifelse(app == "NOOP", "NoOp", "Thumbnail Maker"))
+  return(df)
+}
+
+pure_latency <- read_latency("python_startup_nobpftrace.csv")
+
+# Graphing
+p <- c("yellowgreen", "violetred4")  # from viridis color pallete.
+cOff <- p[1]
+cOn <- p[2]
+ggplot(pure_latency, aes(factor(Technique, c("Vanilla", "Prebaking", "Prebaking Warm")), Value, colour=App)) +
+  geom_jitter(alpha=0.3) +
+  #stat_summary(fun.data = median_cl_boot, geom = "errorbar") +
+  #stat_summary(fun.data = median_ci_text, geom = "text", size=3.5)  +
+  facet_wrap(~Runtime) +
+  #theme_pubclean() +
+  scale_color_manual(values=p) +
+  scale_y_continuous(limits = c(0, max(pure_latency$Value)+20), breaks = seq(0, max(pure_latency$Value), by = 200)) +
+  labs(x="Technique", y="Latency (ms)")+
+  theme(
+    #legend.position="none",
+    axis.title.x=element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
+
+ggsave("python_latency_cmp.png")
+```
+
+```{r multiple_servicetime_cmp, fig.width=7, fig.height=5}
+# Metrics:
+# RuntimeReadyTime -> time between the start of the function and until it is ready to start serving requests.
+# ExecID -> Treatment replica ID
+# ReqID -> ID of the request within the treatment replica (0 meaning the first request)
+
+# Reading data
+read_servicetime <- function(f) {
+  df <- read.csv(f) 
+  df <- df %>% filter((Metric == "ServiceTime") & ReqID < 200) %>% rename("Value" = "Value_NS")
+  df$Value <- df$Value / 10^6 
+  #df <- df %>% mutate(app = ifelse(app == "NOOP", "NoOp", "Thumbnail Maker"))
+  return(df)
+}
+
+pure_servicetime <- read_servicetime("python_startup_nobpftrace.csv")
+
+# Graphing
+p <- c("yellowgreen", "violetred4")  # from viridis color pallete.
+cOff <- p[1]
+cOn <- p[2]
+ggplot(pure_servicetime %>% 
+         filter(App == "NoOp" & ReqID == 0), 
+       aes(Value, colour=factor(Technique, c("Vanilla", "Prebaking", "Prebaking Warm")))) +
+  #geom_jitter(alpha=0.3) +
+  #geom_point(size = 0.5) +
+  stat_ecdf(geom = "step") +
+  #stat_summary(fun.data = median_cl_boot, geom = "errorbar") +
+  #stat_summary(fun.data = median_ci_text, geom = "text", size=3.5)  +
+  facet_wrap(. ~ Runtime) +
+  #theme_pubclean() +
+  #scale_color_manual(values=p) +
+  #scale_y_continuous(limits = c(0, 200)) +
+  labs(x="Service Time of First Request (ms)", y="F(Service Time)", colour = "Technique") +
+  theme(
+    #legend.position="none",
+    #axis.title.x=element_blank(),
+    #axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
+
+ggsave("python_noop_servicetime_ecdf_cmp.png")
+
+ggplot(pure_servicetime %>% 
+         filter(App == "Thumbnailator" & ReqID == 0),
+       aes(Value, colour=factor(Technique, c("Vanilla", "Prebaking", "Prebaking Warm")))) +
+  #geom_jitter(alpha=0.3) +
+  #geom_point(size = 0.5) +
+  stat_ecdf(geom = "step") +
+  #stat_summary(fun.data = median_cl_boot, geom = "errorbar") +
+  #stat_summary(fun.data = median_ci_text, geom = "text", size=3.5)  +
+  facet_wrap(. ~ Runtime) +
+  #theme_pubclean() +
+  #scale_color_manual(values=p) +
+  #scale_y_continuous(limits = c(0, 200)) +
+  labs(x="Service Time of First Request (ms)", y="F(Service Time)", colour = "Technique") +
+  theme(
+    #legend.position="none",
+    #axis.title.x=element_blank(),
+    #axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
+
+ggsave("python_thumb_servicetime_ecdf_cmp.png")
+```
+
+```{r bpftrace_data_treatment, fig.width=7, fig.height=5}
+require(dplyr)
+require(reshape2)
+
+read_bpftrace_pure_data <- function(df) {
+  
+  evaluate <- function(df, v1, v2, is_pb=FALSE, v3_opt=NA) {
+    if (is_pb) {
+      if (!is.na(v3_opt) && length(v1) == 1 && length(v3_opt) == 1) {
+        return(df[v1] - df[v3_opt])
+      } else {
+        return(NA)
+      }
+    } else {
+      if (length(v1) == 1 && length(v2) == 1) {
+        return(df[v1] - df[v2])
+      } else {
+        return(NA)
+      }
+    }
+  }
+  
+  return (df %>%
+      group_by(Technique, Runtime, App, ExecID, ReqID) %>%
+      summarise(
+        CloneTime = evaluate(Value_NS, which(Metric == "CloneExit"), which(Metric == "CloneEntry")),
+        ExecTime = evaluate(Value_NS, which(Metric == "ExecveExit"), which(Metric == "CloneExit")),
+        RuntimeTime = evaluate(Value_NS, 
+                               which(Metric == "MainEntry"), 
+                               which(Metric == "ExecveExit"), 
+                               grepl("^Prebaking", unique(Technique))),
+        InitializationTime = evaluate(Value_NS, 
+                                      which(Metric == "Ready2Serve"), 
+                                      which(Metric == "MainEntry"), 
+                                      grepl("^Prebaking", unique(Technique)), 
+                                      which(Metric == "ExecveExit"))) %>%
+      melt(id.vars = c("Technique", "Runtime", "App", "ExecID", "ReqID"), 
+           measure.vars = c("CloneTime", "ExecTime", "RuntimeTime", "InitializationTime")) %>%
+      rename("Metric" = "variable", "Value_NS" = "value"))
+}
+
 ```
 
 
@@ -134,70 +288,47 @@ write.csv(nocriu_newbpftrace_nogc_nowarmup,
 # InitializationTime -> time between the exec of the function and until it is ready to start serving requests.
 # ExecID -> Treatment replica ID
 # ReqID -> ID of the request within the treatment replica (0 meaning the first request)
-require(dplyr)
+
 require(ggplot2)
-require(ggpubr)
 
-read_startup_bpfstrace <- function(f) {
-  df <- read.csv(f) 
-  df <- df %>% filter(ReqID == 0) %>% select(App, Metric, Value_NS)
-  colnames(df) <- c("app", "metric", "value")
-  df$value <- df$value / 10^6
-  df <- df %>% mutate(app = ifelse(app == "NoOp" | app == "NOOP", "NOOP", "Thumbnail Maker"))
+read_startup_bpfstrace <- function(df) {
+  df <- df %>% rename("Value" = "Value_NS") %>% filter(!is.na(Value))
+  df$Value <- df$Value / 10^6
 
-  SAMPLE_SIZE <- 200
-  ct <- df %>% filter(metric == "CloneTime") %>% select(app, metric, value) %>% sample_n(SAMPLE_SIZE)
-  ct$metric <- "CLONE"
-  et <- df %>% filter(metric == "ExecTime") %>% select(app, metric, value) %>% sample_n(SAMPLE_SIZE)
-  et$metric <- "EXEC"
-  it <- df %>% filter(metric == "InitializationTime") %>% select(app, metric, value) %>% sample_n(SAMPLE_SIZE)
-  it$metric <- "APPINIT"
-  rt <- df %>% filter(metric == "RuntimeTime")
-  if (NROW(rt) > 0) {
-    rt <- rt %>% select(app, metric, value) %>% sample_n(SAMPLE_SIZE)
-  } else {
-    # The prebaking output CSV has no RuntimeTime entries. It should be 0.
-    # Ensuring that all dfs have the same size.  
-    rt <- rbind(
-    data.frame("app"=replicate(SAMPLE_SIZE, "NOOP"), "value"=replicate(SAMPLE_SIZE, 0), "metric"=replicate(SAMPLE_SIZE, "0")),
-    data.frame("app"=replicate(SAMPLE_SIZE, "Thumbnail Maker"), "value"=replicate(SAMPLE_SIZE, 0), "metric"=replicate(SAMPLE_SIZE, "0")))
-  }
-  rt$metric <- "RTS"
+  ct <- df %>% filter(Metric == "CloneTime")
+  ct$Metric <- "CLONE"
+  et <- df %>% filter(Metric == "ExecTime")
+  et$Metric <- "EXEC"
+  it <- df %>% filter(Metric == "InitializationTime")
+  it$Metric <- "APPINIT"
+  rt <- df %>% filter(Metric == "RuntimeTime")
+  rt$Metric <- "RTS"
   return(rbind(ct, et, rt, it))
 }
 
-pb <- read_startup_bpfstrace("criu_bpftrace_nogc_nowarmup.csv")
-vanilla <- read_startup_bpfstrace("nocriu_newbpftrace_nogc_nowarmup.csv")
+pure_bpftrace_startup <- read.csv("new_startup_bpftrace.csv") %>% 
+  mutate(App = replace(App, App == "NoOp", "NOOP")) %>% 
+  mutate(App = replace(App, App == "Thumbnailator", "Thumbnail Maker"))
 
-calc_perc <- function(df, appName){
-  return (df %>%
-    filter(app==appName) %>%
-    group_by(metric) %>%
-    summarise(sum=sum(value)) %>%
-    mutate(perc=signif((sum/sum(sum))*100, digits=3)))
+bpftrace_startup <- read_startup_bpfstrace(
+  rbind(pure_bpftrace_startup %>% filter(Runtime == "Java"),
+        read_bpftrace_pure_data(pure_bpftrace_startup %>% filter(Runtime != "Java" & ReqID == 0))))
+
+calc_perc <- function(df){
+  df <- df %>%
+    group_by(Runtime, App, Technique, Metric) %>%
+    summarise(sum=sum(Value),
+              med=median(Value),
+              p99=quantile(Value, c(0.99))) %>%
+    mutate(perc=signif((sum/sum(sum))*100, digits=3))
+  return(df)
 }
 
-noop_pb_perc <- calc_perc(pb, "NOOP")
-noop_pb_perc$app = "NOOP"
-noop_pb_perc$type = "Prebaking"
+perc_bpftrace_startup <- calc_perc(bpftrace_startup)
 
-noop_v_perc <- calc_perc(vanilla, "NOOP")
-noop_v_perc$app = "NOOP"
-noop_v_perc$type = "Vanilla"
-
-tm_pb_perc <- calc_perc(pb, "Thumbnail Maker")
-tm_pb_perc$app = "Thumbnail Maker"
-tm_pb_perc$type = "Prebaking"
-
-tm_v_perc <- calc_perc(vanilla, "Thumbnail Maker")
-tm_v_perc$app = "Thumbnail Maker"
-tm_v_perc$type = "Vanilla"
-
-p <- c("yellowgreen", "violetred4")  # from viridis color pallete.
-cOff <- p[1]
-cOn <- p[2]
-ggplot(rbind(noop_pb_perc, noop_v_perc, tm_pb_perc, tm_v_perc), aes(fill=type, y=perc, x=metric)) +
-  facet_wrap(~app) +
+p <- c("yellowgreen", "skyblue4", "violetred4")  # from viridis color pallete.
+ggplot(perc_bpftrace_startup, aes(fill=Technique, y=perc, x=Metric)) +
+  facet_wrap(Runtime~App) +
   geom_col(position=position_dodge2(), color = "black", size=0.2, alpha=0.9) +
   geom_text(aes(label=paste(perc, "%", sep=""), y=perc+2), position = position_dodge(width=1), size=3, hjust = 0)+
   labs(x="Startup Component", y="Percentage of the Startup Time (%)", fill="Technique:")+
@@ -210,39 +341,22 @@ ggplot(rbind(noop_pb_perc, noop_v_perc, tm_pb_perc, tm_v_perc), aes(fill=type, y
   theme(
     panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
 
-ggsave("startup_components.png")
+ggsave("new_startup_components.png")
 
-startup_components <- 
-  rbind(noop_v_perc %>%
-        group_by(app, type) %>%
-        mutate(value = (perc/100.0) * median(vanilla_noop$value)),
-      noop_pb_perc %>%
-        group_by(app, type) %>% 
-        mutate(value = (perc/100.0) * median(pb_noop$value)) %>%
-        filter(metric != "RTS"), #%>%
-        #mutate(metric = replace(metric, metric=="APPINIT", "RESTORE")),
-      tm_v_perc %>%
-        group_by(app, type) %>%
-        mutate(value = (perc/100.0) * median(vanilla_thumb$value)),
-      tm_pb_perc %>%
-        group_by(app, type) %>%
-        mutate(value = (perc/100.0) * median(pb_thumb$value)) %>%
-        filter(metric != "RTS"))# %>%
-        #mutate(metric = replace(metric, metric=="APPINIT", "RESTORE")))
-
-ggplot(startup_components) +
-  facet_wrap(~app) +
-  geom_bar(aes(y = value, 
-               x = type, 
-               fill = factor(metric, c("RESTORE", "APPINIT", "RTS", "EXEC", "CLONE"))), 
+ggplot(perc_bpftrace_startup) +
+  facet_grid(App~Runtime) +
+  geom_bar(aes(y = med, 
+               x = factor(Technique, c("Prebaking Warm", "Prebaking", "Vanilla")), 
+               fill = factor(Metric, c("APPINIT", "RTS", "EXEC", "CLONE"))), 
            stat = "identity") +
   labs(fill = "Metric", x = "Technique", y = "Startup Time (ms)") +
   #theme_pubclean() +
   theme_bw() +
   scale_fill_grey(start = 0, end = 0.85) +
-  theme(panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
+  theme(panel.grid.major.y = element_line(colour = "darkgray", linetype = 3),
+        axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggsave("stacked_startup_components_bar_plot.png")
+ggsave("new_stacked_startup_components_bar_plot.png")
 
 calc_absolute <- function(df, appName, m){
   aux <- df %>%

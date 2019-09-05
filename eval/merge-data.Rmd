@@ -79,17 +79,17 @@ node_nobpf <- rbind(nocriu_nobpf_nowarm_node_noop, nocriu_nobpf_nowarm_node_thum
 #### NoOp
 
 ```{r PythonNOOPPureStartup}
-nocriu_nobpf_nowarm_python_noop <- read.csv("python/server-http-handler-python-no-criu-noop-1566847934-300-300---.csv")
+nocriu_nobpf_nowarm_python_noop <- read.csv("python/server-http-handler-python-no-criu-noop-1567456446-300-300---.csv")
 nocriu_nobpf_nowarm_python_noop$App <- "NoOp"
 nocriu_nobpf_nowarm_python_noop$Runtime <- "Python"
 nocriu_nobpf_nowarm_python_noop$Technique <- "Vanilla"
 
-criu_nobpf_nowarm_python_noop <- read.csv("python/server-http-handler-python-criu-noop-1566854641-300-300---.csv")
+criu_nobpf_nowarm_python_noop <- read.csv("python/server-http-handler-python-criu-noop-1567464036-300-300---.csv")
 criu_nobpf_nowarm_python_noop$App <- "NoOp"
 criu_nobpf_nowarm_python_noop$Runtime <- "Python"
 criu_nobpf_nowarm_python_noop$Technique <- "Prebaking"
 
-criu_nobpf_warm_python_noop <- read.csv("python/server-http-handler-python-criu-noop-1566850924-300-300-YES--.csv")
+criu_nobpf_warm_python_noop <- read.csv("python/server-http-handler-python-criu-noop-1567459420-300-300-YES--.csv")
 criu_nobpf_warm_python_noop$App <- "NoOp"
 criu_nobpf_warm_python_noop$Runtime <- "Python"
 criu_nobpf_warm_python_noop$Technique <- "Prebaking Warm"
@@ -98,17 +98,17 @@ criu_nobpf_warm_python_noop$Technique <- "Prebaking Warm"
 #### Thumbnailator
 
 ```{r PythonThumbPureStartup}
-nocriu_nobpf_nowarm_python_thumb <- read.csv("python/server-http-handler-python-no-criu-thumbnailator-1566848254-300-300---.csv")
+nocriu_nobpf_nowarm_python_thumb <- read.csv("python/server-http-handler-python-no-criu-thumbnailator-1567456751-300-300---.csv")
 nocriu_nobpf_nowarm_python_thumb$App <- "Thumbnailator"
 nocriu_nobpf_nowarm_python_thumb$Runtime <- "Python"
 nocriu_nobpf_nowarm_python_thumb$Technique <- "Vanilla"
 
-criu_nobpf_nowarm_python_thumb <- read.csv("python/server-http-handler-python-criu-thumbnailator-1566855029-300-300---.csv")
+criu_nobpf_nowarm_python_thumb <- read.csv("python/server-http-handler-python-criu-thumbnailator-1567464743-300-300---.csv")
 criu_nobpf_nowarm_python_thumb$App <- "Thumbnailator"
 criu_nobpf_nowarm_python_thumb$Runtime <- "Python"
 criu_nobpf_nowarm_python_thumb$Technique <- "Prebaking"
 
-criu_nobpf_warm_python_thumb <- read.csv("python/server-http-handler-python-criu-thumbnailator-1566851477-300-300-YES--.csv")
+criu_nobpf_warm_python_thumb <- read.csv("python/server-http-handler-python-criu-thumbnailator-1567460421-300-300-YES--.csv")
 criu_nobpf_warm_python_thumb$App <- "Thumbnailator"
 criu_nobpf_warm_python_thumb$Runtime <- "Python"
 criu_nobpf_warm_python_thumb$Technique <- "Prebaking Warm"
@@ -125,7 +125,7 @@ nobpf_startup <- rbind(java_nobpf,
                        python_nobpf %>%
                          rename("Value_NS" = "KernelTime_NS"))
 write.csv(nobpf_startup, 
-  file = "startup_nobpftrace.csv",
+  file = "python_startup_nobpftrace.csv",
   row.names = FALSE)
 ```
 
@@ -159,6 +159,11 @@ nocriu_bpf_nowarm_node_noop$App <- "NoOp"
 nocriu_bpf_nowarm_node_noop$Runtime <- "NodeJS"
 nocriu_bpf_nowarm_node_noop$Technique <- "Vanilla"
 
+criu_bpf_nowarm_node_noop <- read.csv("node/server-http-handler-nodejs-criu-noop-1567606428-300-2---YES.csv")
+criu_bpf_nowarm_node_noop$App <- "NoOp"
+criu_bpf_nowarm_node_noop$Runtime <- "NodeJS"
+criu_bpf_nowarm_node_noop$Technique <- "Prebaking"
+
 criu_bpf_warm_node_noop <- read.csv("node/server-http-handler-nodejs-criu-noop-1566342218-300-300-YES--bpftrace.csv")
 criu_bpf_warm_node_noop$App <- "NoOp"
 criu_bpf_warm_node_noop$Runtime <- "NodeJS"
@@ -173,6 +178,11 @@ nocriu_bpf_nowarm_node_thumb$App <- "Thumbnailator"
 nocriu_bpf_nowarm_node_thumb$Runtime <- "NodeJS"
 nocriu_bpf_nowarm_node_thumb$Technique <- "Vanilla"
 
+criu_bpf_nowarm_node_thumb <- read.csv("node/server-http-handler-nodejs-criu-thumbnailator-1567470629-300-2---YES.csv")
+criu_bpf_nowarm_node_thumb$App <- "Thumbnailator"
+criu_bpf_nowarm_node_thumb$Runtime <- "NodeJS"
+criu_bpf_nowarm_node_thumb$Technique <- "Prebaking"
+
 criu_bpf_warm_node_thumb <- read.csv("node/server-http-handler-nodejs-criu-thumbnailator-1566344628-300-300-YES--bpftrace.csv")
 criu_bpf_warm_node_thumb$App <- "Thumbnailator"
 criu_bpf_warm_node_thumb$Runtime <- "NodeJS"
@@ -180,7 +190,7 @@ criu_bpf_warm_node_thumb$Technique <- "Prebaking Warm"
 ```
 
 ```{r mergeNodeJs_bpfstartup}
-node_bpf <- rbind(nocriu_bpf_nowarm_node_noop, nocriu_bpf_nowarm_node_thumb, criu_bpf_warm_node_noop, criu_bpf_warm_node_thumb)
+node_bpf <- rbind(nocriu_bpf_nowarm_node_noop, nocriu_bpf_nowarm_node_thumb, criu_bpf_nowarm_node_noop, criu_bpf_nowarm_node_thumb, criu_bpf_warm_node_noop, criu_bpf_warm_node_thumb)
 ```
 
 ### Python
@@ -192,6 +202,11 @@ nocriu_bpf_nowarm_python_noop <- read.csv("python/server-http-handler-python-no-
 nocriu_bpf_nowarm_python_noop$App <- "NoOp"
 nocriu_bpf_nowarm_python_noop$Runtime <- "Python"
 nocriu_bpf_nowarm_python_noop$Technique <- "Vanilla"
+
+criu_bpf_nowarm_python_noop <- read.csv("python/server-http-handler-python-criu-noop-1567468049-300-2---YES.csv")
+criu_bpf_nowarm_python_noop$App <- "NoOp"
+criu_bpf_nowarm_python_noop$Runtime <- "Python"
+criu_bpf_nowarm_python_noop$Technique <- "Prebaking"
 
 criu_bpf_warm_python_noop <- read.csv("python/server-http-handler-python-criu-noop-1566861856-300-300-YES--YES.csv")
 criu_bpf_warm_python_noop$App <- "NoOp"
@@ -207,6 +222,11 @@ nocriu_bpf_nowarm_python_thumb$App <- "Thumbnailator"
 nocriu_bpf_nowarm_python_thumb$Runtime <- "Python"
 nocriu_bpf_nowarm_python_thumb$Technique <- "Vanilla"
 
+criu_bpf_nowarm_python_thumb <- read.csv("python/server-http-handler-python-criu-thumbnailator-1567469322-300-2---YES.csv")
+criu_bpf_nowarm_python_thumb$App <- "Thumbnailator"
+criu_bpf_nowarm_python_thumb$Runtime <- "Python"
+criu_bpf_nowarm_python_thumb$Technique <- "Prebaking"
+
 criu_bpf_warm_python_thumb <- read.csv("python/server-http-handler-python-criu-thumbnailator-1566863030-300-300-YES--YES.csv")
 criu_bpf_warm_python_thumb$App <- "Thumbnailator"
 criu_bpf_warm_python_thumb$Runtime <- "Python"
@@ -214,7 +234,7 @@ criu_bpf_warm_python_thumb$Technique <- "Prebaking Warm"
 ```
 
 ```{r mergePython_bpfstartup}
-python_bpf <- rbind(nocriu_bpf_nowarm_python_noop, nocriu_bpf_nowarm_python_thumb, criu_bpf_warm_python_noop, criu_bpf_warm_python_thumb)
+python_bpf <- rbind(nocriu_bpf_nowarm_python_noop, nocriu_bpf_nowarm_python_thumb, criu_bpf_nowarm_python_noop, criu_bpf_nowarm_python_thumb, criu_bpf_warm_python_noop, criu_bpf_warm_python_thumb)
 ```
 
 ```{r merge_bpfstartup}
@@ -227,6 +247,6 @@ startup_bpftrace <- rbind(java_bpf,
                             filter(ReqID < 2))
 
 write.csv(startup_bpftrace, 
-  file = "startup_bpftrace.csv",
+  file = "new_startup_bpftrace.csv",
   row.names = FALSE)
 ```
