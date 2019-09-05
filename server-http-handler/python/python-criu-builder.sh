@@ -8,10 +8,9 @@ then
 	echo "Build Python App"
 	cd $APP_DIR
 
-	echo "Remove any previous dump files or python app"
+	echo "Remove any previous dump files"
 	set +e
 	rm *.img
-	killall -v python3
 	set -e
 
 	cd -

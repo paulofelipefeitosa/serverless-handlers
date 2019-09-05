@@ -8,10 +8,9 @@ then
 	echo "Build NodeJS App"
 	cd $APP_DIR
 
-	echo "Remove any previous dump files or nodejs app"
+	echo "Remove any previous dump files"
 	set +e
 	rm *.img
-	killall -v node
 	set -e
 
 	cd -

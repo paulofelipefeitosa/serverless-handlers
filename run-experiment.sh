@@ -47,6 +47,13 @@ fi
 HTTP_SERVER_ADDRESS=localhost:9000
 CRIU_APP_OUTPUT=app.log
 
+clean_env() {
+	echo "Killing any conflicting app"
+	set +e
+	killall -v -w node python3 java
+	set -e
+}
+
 build_criu_app() {
 	if [ $RUNTIME == "java" ];
 	then
@@ -59,10 +66,10 @@ build_criu_app() {
 		criu_builder=$TYPE_DIR/$RUNTIME/python-criu-builder.sh
 	fi
 
+	clean_env
+
 	echo "Building $APP_DIR App"
 	bash $criu_builder "build" $APP_DIR
-
-	sleep 0.5
 
 	echo "Running $APP_DIR App"
 	bash $criu_builder "dump" $APP_DIR $HTTP_SERVER_ADDRESS $CRIU_APP_OUTPUT -scale=0.1 -image_path=$IMAGE_PATH -sfjar=$SF_JAR_PATH -warm=$WARM_REQ
@@ -71,28 +78,15 @@ build_criu_app() {
 build_default_app() {
 	if [ $RUNTIME == "java" ];
 	then
-		set +e
-		killall -v java
-		set -e
-
 		cd $APP_DIR
 
 		echo "Building $APP_DIR App to Jar"
 		mvn install
 
 		cd -
-	elif [ $RUNTIME == "nodejs" ];
-	then
-		set +e
-		killall -v node
-		set -e
-	elif [ $RUNTIME == "python" ]
-	then
-		set +e
-		killall -v python3
-		set -e
 	fi
 	
+	clean_env
 }
 
 echo "Building experiment"
@@ -122,7 +116,7 @@ BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_
 run_bpftrace() {
 	if [ -n "$TRACER_DIR" ];
 	then 
-		killall -v bpftrace
+		killall -v -w bpftrace
 		>&2 echo "Running bpftrace probes"
 
 		bpftrace -B 'line' $TRACER_DIR/execve-clone-probes.bt ${EXP_APP_NAME:0:15} $TRACER_EB > $BPFTRACE_OUT &
@@ -173,7 +167,9 @@ do
 			if [ $HANDLER_TYPE == "criu" ];
 			then
 				echo "HTTP Server CRIU Handler"
+				set +e
 				build_criu_app
+				set -e
 
 				BPFTRACER_PID=$( run_bpftrace )
 
