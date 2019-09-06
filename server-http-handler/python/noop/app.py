@@ -21,8 +21,8 @@ def main_route():
     
     if not warm_req:
         print('T6: %d' % get_monotonic_clock())
-    
-    return ret.body
+
+    return ret.__close__()
  
 if __name__ == '__main__':
     http_server = WSGIServer(('', 9000), app)

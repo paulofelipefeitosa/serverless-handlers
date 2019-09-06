@@ -1,3 +1,5 @@
+from flask import make_response
+
 class Response(object):
 
     def __init__(self):
@@ -16,15 +18,19 @@ class Response(object):
     def set_content_type(self, content_type):
         self.content_type = content_type
 
-    def set_body(self, body, encoding="UTF-8"):
-        self.body += body
+    def set_body_encoding(self, encoding="UTF-8"):
         self.body_encoding = encoding
 
-    def __close__(self, request):
-        request.send_response(self.status_code)
+    def set_body(self, body):
+        self.body += body
+        
+    def __close__(self):
+        resp = make_response(self.body.encode(self.body_encoding), self.status_code)
+        
         if self.content_type:
-            request.send_header('Content-type', self.content_type)
+            resp.headers['Content-type'] = self.content_type
+        
         for key, value in self.headers.items():
-            request.send_header(key, value)
-        request.end_headers()
-        request.wfile.write(self.body.encode(self.body_encoding))
+            resp.headers[key] = value
+
+        return resp
