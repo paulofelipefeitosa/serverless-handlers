@@ -1,5 +1,11 @@
 # Thumbnail Maker HTTP Server
 
+## Install
+
+```bash
+pip3 install flask gevent
+```
+
 ## Run
 
 ```bash

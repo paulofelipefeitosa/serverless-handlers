@@ -1,39 +1,30 @@
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from utils.http_entities import Request, RequestType
-import handler
 import time
 
 def get_monotonic_clock():
     return int(time.monotonic() * 1e9)
 
-class RequestHandler(BaseHTTPRequestHandler):
+print('EIM: %d' % get_monotonic_clock())
 
-    def handle_request(self, req_type):
-        request = Request(self, req_type)
-        warm_req = request.get_header('X-Warm-Request') == 'true'
-        if not warm_req:
-            print('T4: %d' % get_monotonic_clock())
-        
-        response = handler.handle(request)
-        response.__close__(self)
+from flask import Flask, request
+from gevent.pywsgi import WSGIServer
+import handler
+ 
+app = Flask(__name__)
+ 
+@app.route("/", methods=["POST", "GET"])
+def main_route():
+    warm_req = request.headers.get("X-Warm-Request", None) == 'true'
+    if not warm_req:
+        print('T4: %d' % get_monotonic_clock())
+    
+    ret = handler.handle(request)
+    
+    if not warm_req:
+        print('T6: %d' % get_monotonic_clock())
 
-        if not warm_req:
-            print('T6: %d' % get_monotonic_clock())
-
-    def do_GET(self):
-        self.handle_request(RequestType.GET)
-    def do_POST(self):
-        self.handle_request(RequestType.POST)
-
-def run():
-    server_address = ('127.0.0.1', 9000)
-    httpd = HTTPServer(server_address, RequestHandler)
-    try:
-        print('EFM: %d' % get_monotonic_clock())
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        httpd.socket.close()
-
+    return ret.__close__()
+ 
 if __name__ == '__main__':
-    print('EIM: %d' % get_monotonic_clock())
-    run()
+    http_server = WSGIServer(('', 9000), app)
+    print('EFM: %d' % get_monotonic_clock())
+    http_server.serve_forever()
