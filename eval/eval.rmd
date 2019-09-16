@@ -108,11 +108,13 @@ read_startup <- function(f) {
   df <- read.csv(f) 
   df <- df %>% filter(Metric == "RuntimeReadyTime" & ReqID == 0) %>% rename("Value" = "Value_NS")
   df$Value <- df$Value / 10^6 
-  #df <- df %>% mutate(app = ifelse(app == "NOOP", "NoOp", "Thumbnail Maker"))
+  df <- df %>%
+    group_by(Technique, Runtime, App) %>%
+    sample_n(size = 200)
   return(df)
 }
 
-pure_startup <- read_startup("python_startup_nobpftrace.csv")
+pure_startup <- read_startup("startup_nobpftrace.csv")
 
 # Graphing
 p <- c("yellowgreen", "violetred4")  # from viridis color pallete.
@@ -133,7 +135,7 @@ ggplot(pure_startup, aes(factor(Technique, c("Vanilla", "Prebaking", "Prebaking 
     axis.text.x = element_text(angle = 45, hjust = 1),
     panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
 
-ggsave("python_startup_cmp.png")
+ggsave("startup_cmp.png")
 ```
 
 ```{r multiple_latency_cmp, fig.width=7, fig.height=5}
@@ -147,11 +149,13 @@ read_latency <- function(f) {
   df <- read.csv(f) 
   df <- df %>% filter((Metric == "LatencyTime" | Metric == "Latency") & ReqID == 0) %>% rename("Value" = "Value_NS")
   df$Value <- df$Value / 10^6 
-  #df <- df %>% mutate(app = ifelse(app == "NOOP", "NoOp", "Thumbnail Maker"))
+  df <- df %>%
+    group_by(Technique, Runtime, App) %>%
+    sample_n(size = 200)
   return(df)
 }
 
-pure_latency <- read_latency("python_startup_nobpftrace.csv")
+pure_latency <- read_latency("startup_nobpftrace.csv")
 
 # Graphing
 p <- c("yellowgreen", "violetred4")  # from viridis color pallete.
@@ -164,7 +168,8 @@ ggplot(pure_latency, aes(factor(Technique, c("Vanilla", "Prebaking", "Prebaking 
   facet_wrap(~Runtime) +
   #theme_pubclean() +
   scale_color_manual(values=p) +
-  scale_y_continuous(limits = c(0, max(pure_latency$Value)+20), breaks = seq(0, max(pure_latency$Value), by = 200)) +
+  #scale_y_continuous(limits = c(0, max(pure_latency$Value)+20), breaks = seq(0, max(pure_latency$Value), by = 200)) +
+  scale_y_continuous(limits = c(0, 600), breaks = seq(0, 600, by = 100)) +
   labs(x="Technique", y="Latency (ms)")+
   theme(
     #legend.position="none",
@@ -172,7 +177,7 @@ ggplot(pure_latency, aes(factor(Technique, c("Vanilla", "Prebaking", "Prebaking 
     axis.text.x = element_text(angle = 45, hjust = 1),
     panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
 
-ggsave("python_latency_cmp.png")
+ggsave("latency_cmp_600scale.png")
 ```
 
 ```{r multiple_servicetime_cmp, fig.width=7, fig.height=5}
@@ -190,7 +195,7 @@ read_servicetime <- function(f) {
   return(df)
 }
 
-pure_servicetime <- read_servicetime("python_startup_nobpftrace.csv")
+pure_servicetime <- read_servicetime("startup_nobpftrace.csv")
 
 # Graphing
 p <- c("yellowgreen", "violetred4")  # from viridis color pallete.
@@ -215,7 +220,7 @@ ggplot(pure_servicetime %>%
     #axis.text.x = element_text(angle = 45, hjust = 1),
     panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
 
-ggsave("python_noop_servicetime_ecdf_cmp.png")
+ggsave("noop_servicetime_ecdf_cmp.png")
 
 ggplot(pure_servicetime %>% 
          filter(App == "Thumbnailator" & ReqID == 0),
@@ -236,50 +241,7 @@ ggplot(pure_servicetime %>%
     #axis.text.x = element_text(angle = 45, hjust = 1),
     panel.grid.major.y = element_line(colour = "darkgray", linetype = 3))
 
-ggsave("python_thumb_servicetime_ecdf_cmp.png")
-```
-
-```{r bpftrace_data_treatment, fig.width=7, fig.height=5}
-require(dplyr)
-require(reshape2)
-
-read_bpftrace_pure_data <- function(df) {
-  
-  evaluate <- function(df, v1, v2, is_pb=FALSE, v3_opt=NA) {
-    if (is_pb) {
-      if (!is.na(v3_opt) && length(v1) == 1 && length(v3_opt) == 1) {
-        return(df[v1] - df[v3_opt])
-      } else {
-        return(NA)
-      }
-    } else {
-      if (length(v1) == 1 && length(v2) == 1) {
-        return(df[v1] - df[v2])
-      } else {
-        return(NA)
-      }
-    }
-  }
-  
-  return (df %>%
-      group_by(Technique, Runtime, App, ExecID, ReqID) %>%
-      summarise(
-        CloneTime = evaluate(Value_NS, which(Metric == "CloneExit"), which(Metric == "CloneEntry")),
-        ExecTime = evaluate(Value_NS, which(Metric == "ExecveExit"), which(Metric == "CloneExit")),
-        RuntimeTime = evaluate(Value_NS, 
-                               which(Metric == "MainEntry"), 
-                               which(Metric == "ExecveExit"), 
-                               grepl("^Prebaking", unique(Technique))),
-        InitializationTime = evaluate(Value_NS, 
-                                      which(Metric == "Ready2Serve"), 
-                                      which(Metric == "MainEntry"), 
-                                      grepl("^Prebaking", unique(Technique)), 
-                                      which(Metric == "ExecveExit"))) %>%
-      melt(id.vars = c("Technique", "Runtime", "App", "ExecID", "ReqID"), 
-           measure.vars = c("CloneTime", "ExecTime", "RuntimeTime", "InitializationTime")) %>%
-      rename("Metric" = "variable", "Value_NS" = "value"))
-}
-
+ggsave("thumb_servicetime_ecdf_cmp.png")
 ```
 
 
@@ -291,28 +253,7 @@ read_bpftrace_pure_data <- function(df) {
 
 require(ggplot2)
 
-read_startup_bpfstrace <- function(df) {
-  df <- df %>% rename("Value" = "Value_NS") %>% filter(!is.na(Value))
-  df$Value <- df$Value / 10^6
-
-  ct <- df %>% filter(Metric == "CloneTime")
-  ct$Metric <- "CLONE"
-  et <- df %>% filter(Metric == "ExecTime")
-  et$Metric <- "EXEC"
-  it <- df %>% filter(Metric == "InitializationTime")
-  it$Metric <- "APPINIT"
-  rt <- df %>% filter(Metric == "RuntimeTime")
-  rt$Metric <- "RTS"
-  return(rbind(ct, et, rt, it))
-}
-
-pure_bpftrace_startup <- read.csv("new_startup_bpftrace.csv") %>% 
-  mutate(App = replace(App, App == "NoOp", "NOOP")) %>% 
-  mutate(App = replace(App, App == "Thumbnailator", "Thumbnail Maker"))
-
-bpftrace_startup <- read_startup_bpfstrace(
-  rbind(pure_bpftrace_startup %>% filter(Runtime == "Java"),
-        read_bpftrace_pure_data(pure_bpftrace_startup %>% filter(Runtime != "Java" & ReqID == 0))))
+bpftrace_startup <- read.csv("treated_startup_bpftrace.csv")
 
 calc_perc <- function(df){
   df <- df %>%

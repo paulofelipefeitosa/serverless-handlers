@@ -79,17 +79,17 @@ node_nobpf <- rbind(nocriu_nobpf_nowarm_node_noop, nocriu_nobpf_nowarm_node_thum
 #### NoOp
 
 ```{r PythonNOOPPureStartup}
-nocriu_nobpf_nowarm_python_noop <- read.csv("python/server-http-handler-python-no-criu-noop-1567456446-300-300---.csv")
+nocriu_nobpf_nowarm_python_noop <- read.csv("python/flask/server-http-handler-python-no-criu-noop-1567793204-300-300---.csv")
 nocriu_nobpf_nowarm_python_noop$App <- "NoOp"
 nocriu_nobpf_nowarm_python_noop$Runtime <- "Python"
 nocriu_nobpf_nowarm_python_noop$Technique <- "Vanilla"
 
-criu_nobpf_nowarm_python_noop <- read.csv("python/server-http-handler-python-criu-noop-1567464036-300-300---.csv")
+criu_nobpf_nowarm_python_noop <- read.csv("python/flask/server-http-handler-python-criu-noop-1567795924-300-300---.csv")
 criu_nobpf_nowarm_python_noop$App <- "NoOp"
 criu_nobpf_nowarm_python_noop$Runtime <- "Python"
 criu_nobpf_nowarm_python_noop$Technique <- "Prebaking"
 
-criu_nobpf_warm_python_noop <- read.csv("python/server-http-handler-python-criu-noop-1567459420-300-300-YES--.csv")
+criu_nobpf_warm_python_noop <- read.csv("python/flask/server-http-handler-python-criu-noop-1568640415-300-300-YES--.csv")
 criu_nobpf_warm_python_noop$App <- "NoOp"
 criu_nobpf_warm_python_noop$Runtime <- "Python"
 criu_nobpf_warm_python_noop$Technique <- "Prebaking Warm"
@@ -98,17 +98,17 @@ criu_nobpf_warm_python_noop$Technique <- "Prebaking Warm"
 #### Thumbnailator
 
 ```{r PythonThumbPureStartup}
-nocriu_nobpf_nowarm_python_thumb <- read.csv("python/server-http-handler-python-no-criu-thumbnailator-1567456751-300-300---.csv")
+nocriu_nobpf_nowarm_python_thumb <- read.csv("python/flask/server-http-handler-python-no-criu-thumbnailator-1567793304-300-300---.csv")
 nocriu_nobpf_nowarm_python_thumb$App <- "Thumbnailator"
 nocriu_nobpf_nowarm_python_thumb$Runtime <- "Python"
 nocriu_nobpf_nowarm_python_thumb$Technique <- "Vanilla"
 
-criu_nobpf_nowarm_python_thumb <- read.csv("python/server-http-handler-python-criu-thumbnailator-1567464743-300-300---.csv")
+criu_nobpf_nowarm_python_thumb <- read.csv("python/flask/server-http-handler-python-criu-thumbnailator-1567796648-300-300---.csv")
 criu_nobpf_nowarm_python_thumb$App <- "Thumbnailator"
 criu_nobpf_nowarm_python_thumb$Runtime <- "Python"
 criu_nobpf_nowarm_python_thumb$Technique <- "Prebaking"
 
-criu_nobpf_warm_python_thumb <- read.csv("python/server-http-handler-python-criu-thumbnailator-1567460421-300-300-YES--.csv")
+criu_nobpf_warm_python_thumb <- read.csv("python/flask/server-http-handler-python-criu-thumbnailator-1568641413-300-300-YES--.csv")
 criu_nobpf_warm_python_thumb$App <- "Thumbnailator"
 criu_nobpf_warm_python_thumb$Runtime <- "Python"
 criu_nobpf_warm_python_thumb$Technique <- "Prebaking Warm"
@@ -125,7 +125,7 @@ nobpf_startup <- rbind(java_nobpf,
                        python_nobpf %>%
                          rename("Value_NS" = "KernelTime_NS"))
 write.csv(nobpf_startup, 
-  file = "python_startup_nobpftrace.csv",
+  file = "startup_nobpftrace.csv",
   row.names = FALSE)
 ```
 
@@ -198,17 +198,17 @@ node_bpf <- rbind(nocriu_bpf_nowarm_node_noop, nocriu_bpf_nowarm_node_thumb, cri
 #### NoOp
 
 ```{r PythonNOOP_bpfstartup}
-nocriu_bpf_nowarm_python_noop <- read.csv("python/server-http-handler-python-no-criu-noop-1566857877-300-300---YES.csv")
+nocriu_bpf_nowarm_python_noop <- read.csv("python/flask/server-http-handler-python-no-criu-noop-1568644963-300-2---YES.csv")
 nocriu_bpf_nowarm_python_noop$App <- "NoOp"
 nocriu_bpf_nowarm_python_noop$Runtime <- "Python"
 nocriu_bpf_nowarm_python_noop$Technique <- "Vanilla"
 
-criu_bpf_nowarm_python_noop <- read.csv("python/server-http-handler-python-criu-noop-1567468049-300-2---YES.csv")
+criu_bpf_nowarm_python_noop <- read.csv("python/flask/server-http-handler-python-criu-noop-1568646330-300-2---YES.csv")
 criu_bpf_nowarm_python_noop$App <- "NoOp"
 criu_bpf_nowarm_python_noop$Runtime <- "Python"
 criu_bpf_nowarm_python_noop$Technique <- "Prebaking"
 
-criu_bpf_warm_python_noop <- read.csv("python/server-http-handler-python-criu-noop-1566861856-300-300-YES--YES.csv")
+criu_bpf_warm_python_noop <- read.csv("python/flask/server-http-handler-python-criu-noop-1568648955-300-2-YES--YES.csv")
 criu_bpf_warm_python_noop$App <- "NoOp"
 criu_bpf_warm_python_noop$Runtime <- "Python"
 criu_bpf_warm_python_noop$Technique <- "Prebaking Warm"
@@ -217,17 +217,17 @@ criu_bpf_warm_python_noop$Technique <- "Prebaking Warm"
 #### Thumbnailator
 
 ```{r PythonThumb_bpfstartup}
-nocriu_bpf_nowarm_python_thumb <- read.csv("python/server-http-handler-python-no-criu-thumbnailator-1566858574-300-300---YES.csv")
+nocriu_bpf_nowarm_python_thumb <- read.csv("python/flask/server-http-handler-python-no-criu-thumbnailator-1568645634-300-2---YES.csv")
 nocriu_bpf_nowarm_python_thumb$App <- "Thumbnailator"
 nocriu_bpf_nowarm_python_thumb$Runtime <- "Python"
 nocriu_bpf_nowarm_python_thumb$Technique <- "Vanilla"
 
-criu_bpf_nowarm_python_thumb <- read.csv("python/server-http-handler-python-criu-thumbnailator-1567469322-300-2---YES.csv")
+criu_bpf_nowarm_python_thumb <- read.csv("python/flask/server-http-handler-python-criu-thumbnailator-1568647626-300-2---YES.csv")
 criu_bpf_nowarm_python_thumb$App <- "Thumbnailator"
 criu_bpf_nowarm_python_thumb$Runtime <- "Python"
 criu_bpf_nowarm_python_thumb$Technique <- "Prebaking"
 
-criu_bpf_warm_python_thumb <- read.csv("python/server-http-handler-python-criu-thumbnailator-1566863030-300-300-YES--YES.csv")
+criu_bpf_warm_python_thumb <- read.csv("python/flask/server-http-handler-python-criu-thumbnailator-1568650553-300-2-YES--YES.csv")
 criu_bpf_warm_python_thumb$App <- "Thumbnailator"
 criu_bpf_warm_python_thumb$Runtime <- "Python"
 criu_bpf_warm_python_thumb$Technique <- "Prebaking Warm"
@@ -235,6 +235,64 @@ criu_bpf_warm_python_thumb$Technique <- "Prebaking Warm"
 
 ```{r mergePython_bpfstartup}
 python_bpf <- rbind(nocriu_bpf_nowarm_python_noop, nocriu_bpf_nowarm_python_thumb, criu_bpf_nowarm_python_noop, criu_bpf_nowarm_python_thumb, criu_bpf_warm_python_noop, criu_bpf_warm_python_thumb)
+```
+
+```{r bpftrace_data_treatment}
+require(dplyr)
+require(reshape2)
+
+read_bpftrace_pure_data <- function(df) {
+  
+  evaluate <- function(df, v1, v2, is_pb=FALSE, v3_opt=NA) {
+    if (is_pb) {
+      if (!is.na(v3_opt) && length(v1) == 1 && length(v3_opt) == 1) {
+        return(df[v1] - df[v3_opt])
+      } else {
+        return(NA)
+      }
+    } else {
+      if (length(v1) == 1 && length(v2) == 1) {
+        return(df[v1] - df[v2])
+      } else {
+        return(NA)
+      }
+    }
+  }
+  
+  return (df %>%
+      group_by(Technique, Runtime, App, ExecID, ReqID) %>%
+      summarise(
+        CloneTime = evaluate(Value_NS, which(Metric == "CloneExit"), which(Metric == "CloneEntry")),
+        ExecTime = evaluate(Value_NS, which(Metric == "ExecveExit"), which(Metric == "CloneExit")),
+        RuntimeTime = evaluate(Value_NS, 
+                               which(Metric == "MainEntry"), 
+                               which(Metric == "ExecveExit"), 
+                               grepl("^Prebaking", unique(Technique))),
+        InitializationTime = evaluate(Value_NS, 
+                                      which(Metric == "Ready2Serve"), 
+                                      which(Metric == "MainEntry"), 
+                                      grepl("^Prebaking", unique(Technique)), 
+                                      which(Metric == "ExecveExit"))) %>%
+      melt(id.vars = c("Technique", "Runtime", "App", "ExecID", "ReqID"), 
+           measure.vars = c("CloneTime", "ExecTime", "RuntimeTime", "InitializationTime")) %>%
+      rename("Metric" = "variable", "Value_NS" = "value"))
+}
+
+read_startup_bpfstrace <- function(df) {
+  df <- df %>% rename("Value" = "Value_NS") %>% filter(!is.na(Value))
+  df$Value <- df$Value / 10^6
+
+  ct <- df %>% filter(Metric == "CloneTime")
+  ct$Metric <- "CLONE"
+  et <- df %>% filter(Metric == "ExecTime")
+  et$Metric <- "EXEC"
+  it <- df %>% filter(Metric == "InitializationTime")
+  it$Metric <- "APPINIT"
+  rt <- df %>% filter(Metric == "RuntimeTime")
+  rt$Metric <- "RTS"
+  return(rbind(ct, et, rt, it))
+}
+
 ```
 
 ```{r merge_bpfstartup}
@@ -249,4 +307,16 @@ startup_bpftrace <- rbind(java_bpf,
 write.csv(startup_bpftrace, 
   file = "new_startup_bpftrace.csv",
   row.names = FALSE)
+
+pure_bpftrace_startup <- startup_bpftrace %>% 
+  mutate(App = replace(App, App == "NoOp", "NOOP")) %>% 
+  mutate(App = replace(App, App == "Thumbnailator", "Thumbnail Maker"))
+
+bpftrace_startup <- read_startup_bpfstrace(
+  rbind(pure_bpftrace_startup %>% filter(Runtime == "Java"),
+        read_bpftrace_pure_data(pure_bpftrace_startup %>% filter(Runtime != "Java" & ReqID == 0))))
+
+write.csv(bpftrace_startup,
+          file = "treated_startup_bpftrace.csv",
+          row.names = FALSE)
 ```
