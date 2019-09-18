@@ -133,6 +133,44 @@ write.csv(nobpf_startup,
 
 ### Java
 
+#### NoOp
+
+```{r JavaNOOP_bpfstartup}
+nocriu_bpf_nowarm_java_noop <- read.csv("java/new-bpftrace/server-http-handler-java-no-criu-noop-1568659459-300-2---YES.csv")
+nocriu_bpf_nowarm_java_noop$App <- "NoOp"
+nocriu_bpf_nowarm_java_noop$Runtime <- "Java"
+nocriu_bpf_nowarm_java_noop$Technique <- "Vanilla"
+
+criu_bpf_nowarm_java_noop <- read.csv("java/new-bpftrace/server-http-handler-java-criu-noop-1568662464-300-2---YES.csv")
+criu_bpf_nowarm_java_noop$App <- "NoOp"
+criu_bpf_nowarm_java_noop$Runtime <- "Java"
+criu_bpf_nowarm_java_noop$Technique <- "Prebaking"
+
+criu_bpf_warm_java_noop <- read.csv("java/new-bpftrace/server-http-handler-java-criu-noop-1568667495-300-2-YES--YES.csv")
+criu_bpf_warm_java_noop$App <- "NoOp"
+criu_bpf_warm_java_noop$Runtime <- "Java"
+criu_bpf_warm_java_noop$Technique <- "Prebaking Warm"
+```
+
+#### Thumbnailator
+
+```{r JavaThumb_bpfstartup}
+nocriu_bpf_nowarm_java_thumb <- read.csv("java/new-bpftrace/server-http-handler-java-no-criu-thumbnailator-1568660886-300-2---YES.csv")
+nocriu_bpf_nowarm_java_thumb$App <- "Thumbnailator"
+nocriu_bpf_nowarm_java_thumb$Runtime <- "Java"
+nocriu_bpf_nowarm_java_thumb$Technique <- "Vanilla"
+
+criu_bpf_nowarm_java_thumb <- read.csv("java/new-bpftrace/server-http-handler-java-criu-thumbnailator-1568664838-300-2---YES.csv")
+criu_bpf_nowarm_java_thumb$App <- "Thumbnailator"
+criu_bpf_nowarm_java_thumb$Runtime <- "Java"
+criu_bpf_nowarm_java_thumb$Technique <- "Prebaking"
+
+criu_bpf_warm_java_thumb <- read.csv("java/new-bpftrace/server-http-handler-java-criu-thumbnailator-1568750165-300-2-YES--YES.csv")
+criu_bpf_warm_java_thumb$App <- "Thumbnailator"
+criu_bpf_warm_java_thumb$Runtime <- "Java"
+criu_bpf_warm_java_thumb$Technique <- "Prebaking Warm"
+```
+
 ```{r java_bpfstartup}
 nocriu_bpf_nowarm_java <- read.csv("java/nocriu_newbpftrace_nogc_nowarmup.csv")
 nocriu_bpf_nowarm_java$Runtime <- "Java"
@@ -146,7 +184,7 @@ criu_bpf_warm_java <- read.csv("java/criu_bpftrace_gc_warmup.csv")
 criu_bpf_warm_java$Runtime <- "Java"
 criu_bpf_warm_java$Technique <- "Prebaking Warm"
 
-java_bpf <- rbind(nocriu_bpf_nowarm_java, criu_bpf_nowarm_java, criu_bpf_warm_java)
+java_bpf <-  rbind(nocriu_bpf_nowarm_java_noop, nocriu_bpf_nowarm_java_thumb, criu_bpf_nowarm_java_noop, criu_bpf_nowarm_java_thumb, criu_bpf_warm_java_noop, criu_bpf_warm_java_thumb)
 ```
 
 ### NodeJS
@@ -262,47 +300,34 @@ read_bpftrace_pure_data <- function(df) {
   return (df %>%
       group_by(Technique, Runtime, App, ExecID, ReqID) %>%
       summarise(
-        CloneTime = evaluate(Value_NS, which(Metric == "CloneExit"), which(Metric == "CloneEntry")),
-        ExecTime = evaluate(Value_NS, which(Metric == "ExecveExit"), which(Metric == "CloneExit")),
-        RuntimeTime = evaluate(Value_NS, 
+        CLONE = evaluate(Value, which(Metric == "CloneExit"), which(Metric == "CloneEntry")),
+        EXEC = evaluate(Value, which(Metric == "ExecveExit"), which(Metric == "CloneExit")),
+        RTS = evaluate(Value, 
                                which(Metric == "MainEntry"), 
                                which(Metric == "ExecveExit"), 
                                grepl("^Prebaking", unique(Technique))),
-        InitializationTime = evaluate(Value_NS, 
+        APPINIT = evaluate(Value, 
                                       which(Metric == "Ready2Serve"), 
                                       which(Metric == "MainEntry"), 
                                       grepl("^Prebaking", unique(Technique)), 
-                                      which(Metric == "ExecveExit"))) %>%
+                                      which(Metric == "ExecveExit")),
+        ST = Value[which(Metric == "ServiceTime")]) %>%
       melt(id.vars = c("Technique", "Runtime", "App", "ExecID", "ReqID"), 
-           measure.vars = c("CloneTime", "ExecTime", "RuntimeTime", "InitializationTime")) %>%
-      rename("Metric" = "variable", "Value_NS" = "value"))
-}
-
-read_startup_bpfstrace <- function(df) {
-  df <- df %>% rename("Value" = "Value_NS") %>% filter(!is.na(Value))
-  df$Value <- df$Value / 10^6
-
-  ct <- df %>% filter(Metric == "CloneTime")
-  ct$Metric <- "CLONE"
-  et <- df %>% filter(Metric == "ExecTime")
-  et$Metric <- "EXEC"
-  it <- df %>% filter(Metric == "InitializationTime")
-  it$Metric <- "APPINIT"
-  rt <- df %>% filter(Metric == "RuntimeTime")
-  rt$Metric <- "RTS"
-  return(rbind(ct, et, rt, it))
+           measure.vars = c("CLONE", "EXEC", "RTS", "APPINIT", "ST")) %>%
+      rename("Metric" = "variable", "Value" = "value"))
 }
 
 ```
 
 ```{r merge_bpfstartup}
-startup_bpftrace <- rbind(java_bpf, 
+startup_bpftrace <- rbind(java_bpf %>% 
+                            rename("Value" = "KernelTime_NS"),
                           node_bpf %>% 
-                            rename("Value_NS" = "KernelTime_NS") %>%
-                            filter(ReqID < 2), 
+                            rename("Value" = "KernelTime_NS"),
                           python_bpf %>% 
-                            rename("Value_NS" = "KernelTime_NS") %>%
-                            filter(ReqID < 2))
+                            rename("Value" = "KernelTime_NS"))
+
+startup_bpftrace$Value <- startup_bpftrace$Value / 10^6
 
 write.csv(startup_bpftrace, 
   file = "new_startup_bpftrace.csv",
@@ -312,9 +337,7 @@ pure_bpftrace_startup <- startup_bpftrace %>%
   mutate(App = replace(App, App == "NoOp", "NOOP")) %>% 
   mutate(App = replace(App, App == "Thumbnailator", "Thumbnail Maker"))
 
-bpftrace_startup <- read_startup_bpfstrace(
-  rbind(pure_bpftrace_startup %>% filter(Runtime == "Java"),
-        read_bpftrace_pure_data(pure_bpftrace_startup %>% filter(Runtime != "Java" & ReqID == 0))))
+bpftrace_startup <- read_bpftrace_pure_data(pure_bpftrace_startup %>% filter(ReqID == 0))
 
 write.csv(bpftrace_startup,
           file = "treated_startup_bpftrace.csv",
