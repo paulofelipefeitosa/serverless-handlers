@@ -1,5 +1,5 @@
 from utils.http_entities import Response
-import sys
+import sys, configparser
 
 class Handler:
 
@@ -9,19 +9,18 @@ class Handler:
 	def read_config(self):
 		try:
 			app_config_path = sys.argv[-1]
-			f = open(app_config_path, 'r')
-			fn_ptt = "base_filename="
-			n_classes = "classes="
-			for line in f:
-				fn_ptt_arr = line.split(fn_ptt)
-				n_classes_arr = line.split(n_classes)
-				if len(fn_ptt_arr) > 1:
-					filename = fn_ptt_arr[1]
-				if len(n_classes_arr) > 1:
-					classes = n_classes_arr[1]
-			return (filename, classes)
+			config = configparser.ConfigParser()
+			config.read(app_config_path)
+			section = config['DEFAULT']
+			fn = "base_filepath"
+			classes = "classes"
+			return [section[fn], section[classes]]
 		finally:
 			f.close()
 
 	def handle(self, request):
+		base_filepath = self.config[0]
+		classes = self.config[1]
+		for i in range(1, classes + 1):
+			import (base_filepath + str(i))
 		return Response()

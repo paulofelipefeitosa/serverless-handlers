@@ -9,7 +9,7 @@ pip3 install flask gevent
 ## Run
 
 ```bash
-scale=0.1 image_path=BhlDUOR.jpg python3 app.py
+scale=0.1 image_path=BhlDUOR.jpg python3 -u app.py
 ```
 
 ## Requests

@@ -9,7 +9,7 @@ pip3 install flask gevent
 ## Run
 
 ```bash
-python3 app.py
+python3 -u app.py
 ```
 
 ## Requests
