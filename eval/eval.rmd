@@ -253,7 +253,7 @@ ggsave("thumb_servicetime_ecdf_cmp.png")
 
 require(ggplot2)
 
-bpftrace_startup <- read.csv("treated_startup_bpftrace.csv")
+bpftrace_startup <- read.csv("treated_startup_bpftrace.csv") %>% filter(is.na(Value) == FALSE)
 
 calc_perc <- function(df){
   df <- df %>%
@@ -284,13 +284,13 @@ ggplot(perc_bpftrace_startup, aes(fill=Technique, y=perc, x=Metric)) +
 
 ggsave("new_startup_components.png")
 
-ggplot(perc_bpftrace_startup) +
+ggplot(perc_bpftrace_startup %>% filter(Metric != c("EXEC", "CLONE"))) +
   facet_grid(App~Runtime) +
   geom_bar(aes(y = med, 
-               x = factor(Technique, c("Prebaking Warm", "Prebaking", "Vanilla")), 
-               fill = factor(Metric, c("APPINIT", "RTS", "EXEC", "CLONE"))), 
+               x = factor(Technique, c("Vanilla", "Prebaking", "Prebaking Warm")), 
+               fill = factor(Metric, c("ST", "APPINIT", "RTS"))), 
            stat = "identity") +
-  labs(fill = "Metric", x = "Technique", y = "Startup Time (ms)") +
+  labs(fill = "Metric", x = "Technique", y = "Cold Start Latency (ms)") +
   #theme_pubclean() +
   theme_bw() +
   scale_fill_grey(start = 0, end = 0.85) +
