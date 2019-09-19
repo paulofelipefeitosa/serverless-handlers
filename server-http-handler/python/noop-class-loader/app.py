@@ -17,7 +17,6 @@ def main_route():
     if not warm_req:
         print('T4: %d' % get_monotonic_clock())
     
-    hand = handler.Handler()
     ret = hand.handle(request)
     
     if not warm_req:
@@ -27,5 +26,6 @@ def main_route():
  
 if __name__ == '__main__':
     http_server = WSGIServer(('', 9000), app)
+    hand = handler.Handler()
     print('EFM: %d' % get_monotonic_clock())
     http_server.serve_forever()
