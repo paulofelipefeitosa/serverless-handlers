@@ -17,10 +17,10 @@ def main_route():
     if not warm_req:
         print('T4: %d' % get_monotonic_clock())
     
-    ret = hand.handle(request)
+    (ret, load_stats) = hand.handle(request)
     
     if not warm_req:
-        print('T6: %d' % get_monotonic_clock())
+        print('T6: %d' % get_monotonic_clock() + '\n' + load_stats)
 
     return ret.__close__()
  

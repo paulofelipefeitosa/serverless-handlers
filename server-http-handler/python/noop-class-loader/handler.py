@@ -36,7 +36,7 @@ class Handler:
 			
 			end_load = get_monotonic_clock()
 			
-			getattr(new_module, classname)() # instantiate class
+			getattr(new_module, classname + str(i))() # instantiate class
 			end_inst = get_monotonic_clock()
 			
 			lc_time += end_load - start_load
@@ -45,8 +45,8 @@ class Handler:
 		
 		end = get_monotonic_clock()
 		total_time = end - start
-		print('LCTime: ' + str(lc_time) + '\n' + 
+		load_stats = ('LCTime: ' + str(lc_time) + '\n' + 
 			'ICTime: ' + str(inst_time) + '\n' +
 			'LC: ' + str(counter) + '\n' +
 			'TLTime: ' + str(total_time))
-		return Response()
+		return (Response(), load_stats)
