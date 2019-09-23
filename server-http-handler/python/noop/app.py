@@ -23,7 +23,11 @@ def main_route():
         print('T6: %d' % get_monotonic_clock())
 
     return ret.__close__()
- 
+
+@app.route("/ping", methods=["GET"])
+def up_route():
+    return {}
+
 if __name__ == '__main__':
     http_server = WSGIServer(('', 9000), app)
     print('EFM: %d' % get_monotonic_clock())

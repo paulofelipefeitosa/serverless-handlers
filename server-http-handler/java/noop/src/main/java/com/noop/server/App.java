@@ -13,7 +13,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-
 import com.noop.model.*;
 import com.sun.net.httpserver.Headers;
 
@@ -30,6 +29,13 @@ public class App {
         InvokeHandler invokeHandler = new InvokeHandler(handler);
 
         server.createContext("/", invokeHandler);
+        server.createContext("/ping", new HttpHandler() {
+            @Override
+            public void handle(HttpExchange exchange) throws IOException {
+                exchange.sendResponseHeaders(200, 0);
+                exchange.close();
+            }
+        });
         server.setExecutor(Executors.newSingleThreadExecutor());
         server.start();
         System.out.println("EFM: " + System.nanoTime());
