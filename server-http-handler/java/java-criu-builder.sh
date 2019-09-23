@@ -55,8 +55,13 @@ then
 
 	if [ -n "$WARM_REQ" ];
 	then 
-		echo "Warming $APP_DIR App"
+		echo "Waiting until $APP_DIR App is ready and Warm it up"
 		while [[ "$(curl --header 'X-Warm-Request: true' -s -o /dev/null -w ''%{http_code}'' http://$HTTP_SERVER_ADDRESS/)" != "200" ]]; 
+		    do sleep 1;
+		done
+	else
+		echo "Waiting until $APP_DIR App is ready without Warmup"
+		while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://$HTTP_SERVER_ADDRESS/ping)" != "200" ]]; 
 		    do sleep 1;
 		done
 	fi

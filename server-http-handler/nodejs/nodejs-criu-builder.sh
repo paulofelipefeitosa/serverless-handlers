@@ -55,7 +55,10 @@ then
 		    do sleep 1;
 		done
 	else
-		echo "No Warmup Request"
+		echo "Waiting until $APP_DIR App is ready without Warmup"
+		while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://$HTTP_SERVER_ADDRESS/ping)" != "200" ]]; 
+		    do sleep 1;
+		done
 	fi
 
 	echo "Dumping $APP_DIR App"

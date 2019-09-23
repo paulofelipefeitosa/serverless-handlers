@@ -33,6 +33,13 @@ public class App {
         InvokeHandler invokeHandler = new InvokeHandler(handler);
 
         server.createContext("/", invokeHandler);
+        server.createContext("/ping", new HttpHandler() {
+            @Override
+            public void handle(HttpExchange exchange) throws IOException {
+                exchange.sendResponseHeaders(200, 0);
+                exchange.close();
+            }
+        });
         server.setExecutor(Executors.newSingleThreadExecutor());
         server.start();
         System.out.println("EFM: " + System.nanoTime());
