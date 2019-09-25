@@ -274,8 +274,8 @@ ggplot(perc_bpftrace_startup, aes(fill=Technique, y=perc, x=Metric)) +
   geom_text(aes(label=paste(perc, "%", sep=""), y=perc+2), position = position_dodge(width=1), size=3, hjust = 0)+
   labs(x="Startup Component", y="Percentage of the Startup Time (%)", fill="Technique:")+
   scale_fill_manual(values=p) +
-  scale_x_discrete(limits=c("APPINIT","RTS", "EXEC", "CLONE")) +
-  scale_y_continuous(limits=c(0,110), breaks = seq(0, 110, 20)) +
+  scale_x_discrete(limits=c("ST", "APPINIT","RTS", "EXEC", "CLONE")) +
+  #scale_y_continuous(limits=c(0,110), breaks = seq(0, 110, 20)) +
   coord_flip() +
   #theme_pubclean() +
   theme_bw() +
@@ -285,7 +285,7 @@ ggplot(perc_bpftrace_startup, aes(fill=Technique, y=perc, x=Metric)) +
 ggsave("new_startup_components.png")
 
 ggplot(perc_bpftrace_startup %>% filter(Metric != c("EXEC", "CLONE"))) +
-  facet_grid(App~Runtime) +
+  facet_grid(Runtime~App) +
   geom_bar(aes(y = med, 
                x = factor(Technique, c("Vanilla", "Prebaking", "Prebaking Warm")), 
                fill = factor(Metric, c("ST", "APPINIT", "RTS"))), 
