@@ -482,18 +482,40 @@ require(ggplot2)
 require(reshape)
 require(ggpubr)
 
-read_startup_time <- function(f) {
-  df <- read.csv(f) 
-  df <- data.frame(
-    Complexity=df[df$Metric=="ServiceTime", ]$Loaded_Classes,
-    Value=df[df$Metric=="ServiceTime", ]$KernelTime_NS+df[df$Metric=="RuntimeReadyTime", ]$KernelTime_NS)
-  colnames(df) <- c("app", "value")
-  df$value <- df$value / 10^6 
-  df <- df %>% mutate(app = ifelse(app == "50", "Small", ifelse(app == 250, "Medium", "Big")))
+read_ncl_stats <- function(f) {
+  df <- read.csv(f) %>% rename("Complexity" = "Loaded_Classes") %>% filter(is.na(Value) == FALSE)
+  df$Value <- df$Value / 10^6 
+  df <- df %>% mutate(Complexity = ifelse(Complexity == "50", "Small", ifelse(Complexity == "250", "Medium", "Big")))
   return(df)
 }
-vanilla <- read_startup_time("nocriu-nobpftrace-nogc-nowarmup-noop-class-loader.csv")
-vanilla$type <- "Vanilla"
+vanilla_ncl <- read_ncl_stats("treated_nocriu_ncl_startup_bpftrace.csv")
+
+calc_perc <- function(df){
+  df <- df %>%
+    group_by(Runtime, App, Technique, Complexity, Metric) %>%
+    summarise(sum=sum(Value),
+              med=median(Value),
+              p99=quantile(Value, c(0.99))) %>%
+    mutate(perc=signif((sum/sum(sum))*100, digits=3))
+  return(df)
+}
+
+vanilla_ncl_perc_bpftrace_stats <- calc_perc(vanilla_ncl)
+
+p <- c("yellowgreen", "skyblue4", "violetred4")  # from viridis color pallete.
+ggplot(vanilla_ncl_perc_bpftrace_stats %>% filter(Metric != c("EXEC", "CLONE"))) +
+  geom_bar(aes(y = med, 
+               x = factor(Complexity, c("Small", "Medium", "Big")), 
+               fill = factor(Metric, c("ST", "APPINIT", "RTS"))), 
+           stat = "identity") +
+  labs(fill = "Metric", x = "Function Size", y = "Cold Start Latency (ms)") +
+  #theme_pubclean() +
+  theme_bw() +
+  scale_fill_grey(start = 0, end = 0.85) +
+  theme(panel.grid.major.y = element_line(colour = "darkgray", linetype = 3),
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave("stacked_ncl_latency_components_bar_plot.png")
 
 calculate_median <- function(df, app) {
   df.t <- wilcox.test(df[df$app == app, ]$value, conf.int = T)

@@ -198,3 +198,101 @@ write.csv(bpftrace_startup,
           file = "treated_startup_bpftrace.csv",
           row.names = FALSE)
 ```
+
+## NoOp Class Loader
+
+### Pure Startup
+
+``` {r}
+nocriu_nobpf_ncl_java <- read.csv("java/nocriu-nobpftrace-nogc-nowarmup-noop-class-loader.csv") %>% rename("Value_NS" = "KernelTime_NS")
+nocriu_nobpf_ncl_java$Runtime <- "Java"
+nocriu_nobpf_ncl_java$Technique <- "Vanilla"
+
+criu_nobpf_ncl_nowarm_java <- read.csv("java/criu-nobpf-nogc-nowarmup-noop-class-loader.csv") %>% rename("Value_NS" = "KernelTime_NS")
+criu_nobpf_ncl_nowarm_java$Runtime <- "Java"
+criu_nobpf_ncl_nowarm_java$Technique <- "Prebaking"
+
+nocriu_nobpf_ncl_warm_java <- read.csv("java/criu-nobpf-nogc-warmup-noop-class-loader.csv") %>% rename("Value_NS" = "KernelTime_NS")
+nocriu_nobpf_ncl_warm_java$Runtime <- "Java"
+nocriu_nobpf_ncl_warm_java$Technique <- "Prebaking Warm"
+
+ncl_startup_nobpf <- rbind(nocriu_nobpf_ncl_java, criu_nobpf_ncl_nowarm_java, nocriu_nobpf_ncl_warm_java)
+
+write.csv(ncl_startup_nobpf,
+          file = "ncl_startup_nobpftrace.csv",
+          row.names = FALSE)
+```
+
+### BPFTrace
+
+#### 1k250
+
+``` {r}
+nocriu_bpf_ncl_java_1k250 <- read.csv("java/snapshot-ncldata/server-http-handler-java-no-criu-noop-class-loader-1569441949-300-2--tester-1k2.jar-YES.csv") %>% rename("Value_NS" = "KernelTime_NS")
+nocriu_bpf_ncl_java_1k250$Runtime <- "Java"
+nocriu_bpf_ncl_java_1k250$Technique <- "Vanilla"
+nocriu_bpf_ncl_java_1k250$Loaded_Classes <- "1250"
+nocriu_bpf_ncl_java_1k250$App <- "NoOp Class Loader"
+```
+
+#### 250
+
+``` {r}
+nocriu_bpf_ncl_java_250 <- read.csv("java/snapshot-ncldata/server-http-handler-java-no-criu-noop-class-loader-1569461592-300-2--tester-250c.jar-YES.csv") %>% rename("Value_NS" = "KernelTime_NS")
+nocriu_bpf_ncl_java_250$Runtime <- "Java"
+nocriu_bpf_ncl_java_250$Technique <- "Vanilla"
+nocriu_bpf_ncl_java_250$Loaded_Classes <- "250"
+nocriu_bpf_ncl_java_250$App <- "NoOp Class Loader"
+```
+
+#### 50
+
+``` {r}
+nocriu_bpf_ncl_java_50 <- read.csv("java/snapshot-ncldata/server-http-handler-java-no-criu-noop-class-loader-1569502027-300-2--tester-50c.jar-YES.csv") %>% rename("Value_NS" = "KernelTime_NS")
+nocriu_bpf_ncl_java_50$Runtime <- "Java"
+nocriu_bpf_ncl_java_50$Technique <- "Vanilla"
+nocriu_bpf_ncl_java_50$Loaded_Classes <- "50"
+nocriu_bpf_ncl_java_50$App <- "NoOp Class Loader"
+```
+
+```{r ncl_bpftrace_data_treatment}
+require(dplyr)
+require(reshape2)
+
+read_bpftrace_pure_ncl_data <- function(df) {
+  
+  evaluate <- function(df, v1, v2) {
+      if (length(v1) == 1 && length(v2) == 1) {
+        return(df[v1] - df[v2])
+      } else {
+        return(NA)
+      }
+  }
+  
+  return (df %>%
+      group_by(Technique, Runtime, App, ExecID, ReqID, Loaded_Classes) %>%
+      summarise(
+        CLONE = evaluate(Value, which(Metric == "CloneExit"), which(Metric == "CloneEntry")),
+        EXEC = evaluate(Value, which(Metric == "ExecveExit"), which(Metric == "CloneExit")),
+        RTS = evaluate(Value, which(Metric == "MainEntry"), which(Metric == "ExecveExit")),
+        APPINIT = evaluate(Value, which(Metric == "Ready2Serve"), which(Metric == "MainEntry")), 
+        ST = evaluate(Value, which(Metric == "ServiceTime"), which(Metric == "LoadingClassesOverheadTime"))) %>%
+      melt(id.vars = c("Technique", "Runtime", "App", "ExecID", "ReqID", "Loaded_Classes"), 
+           measure.vars = c("CLONE", "EXEC", "RTS", "APPINIT", "ST")) %>%
+      rename("Metric" = "variable", "Value" = "value"))
+}
+
+```
+
+``` {r merge_bpf_ncl_data}
+nocriu_startup_bpf_ncl <- rbind(nocriu_bpf_ncl_java_1k250, nocriu_bpf_ncl_java_250, nocriu_bpf_ncl_java_50)
+treated_nocriu_startup_bpf_ncl <- read_bpftrace_pure_ncl_data(nocriu_startup_bpf_ncl %>% filter(ReqID == 0) %>% rename("Value" = "Value_NS"))
+
+write.csv(nocriu_startup_bpf_ncl,
+          file = "nocriu_ncl_startup_bpftrace.csv",
+          row.names = FALSE)
+
+write.csv(treated_nocriu_startup_bpf_ncl,
+          file = "treated_nocriu_ncl_startup_bpftrace.csv",
+          row.names = FALSE)
+```
