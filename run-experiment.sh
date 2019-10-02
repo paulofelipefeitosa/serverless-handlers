@@ -156,6 +156,16 @@ parse_bpftrace() {
 	fi
 }
 
+parse_criu_logs() {
+	EXECID=$1
+	EXEC_SUCCESS=$2
+
+	if [ $EXEC_SUCCESS -eq 0 ];
+	then
+		python -u $TRACER_DIR/criu-restore-parser.py $EXECID < $APP_DIR/restore.log >> $RESULTS_FILENAME
+	fi
+}
+
 for i in $(seq "$REP_EXEC")
 do
 	echo "REP_EXEC $i..."
@@ -183,6 +193,7 @@ do
 				set -e
 
 				parse_bpftrace $i $EXECUTION_SUCCESS $BPFTRACER_PID
+				parse_criu_logs $i $EXECUTION_SUCCESS
 			else
 				echo "HTTP Server Handler"
 				build_default_app
