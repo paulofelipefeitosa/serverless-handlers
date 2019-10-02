@@ -69,7 +69,7 @@ build_criu_app() {
 	clean_env
 
 	echo "Building $APP_DIR App"
-	bash $criu_builder "build" $APP_DIR
+	bash $criu_builder "build" $APP_DIR $SF_JAR_PATH
 
 	echo "Running $APP_DIR App"
 	bash $criu_builder "dump" $APP_DIR $HTTP_SERVER_ADDRESS $CRIU_APP_OUTPUT -scale=0.1 -image_path=$IMAGE_PATH -sfjar=$SF_JAR_PATH -warm=$WARM_REQ
@@ -78,12 +78,13 @@ build_criu_app() {
 build_default_app() {
 	if [ $RUNTIME == "java" ];
 	then
-		cd $APP_DIR
-
-		echo "Building $APP_DIR App to Jar"
-		mvn install
-
-		cd -
+		if [ -z "$SF_JAR_PATH" ];
+		then
+			cd $APP_DIR
+			echo "Building $APP_DIR App to Jar"
+			mvn install
+			cd -
+		fi
 	fi
 	
 	clean_env
