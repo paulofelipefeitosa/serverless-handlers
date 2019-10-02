@@ -39,7 +39,7 @@ then
 	SF_JAR_NAME=$(basename $SF_JAR_PATH)
 fi
 
-if [ -n "$TRACER_DIR" ];
+if [ -n "$TRACER_EB" ];
 then
 	BPFTRACE_EXEC="YES"
 fi
@@ -115,7 +115,7 @@ echo "Metric,ExecID,ReqID,KernelTime_NS" > $RESULTS_FILENAME
 
 BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$WARM_REQ-$SF_JAR_NAME-BPFTRACE.out
 run_bpftrace() {
-	if [ -n "$TRACER_DIR" ];
+	if [ -n "$BPFTRACE_EXEC" ];
 	then 
 		killall -v -w bpftrace
 		>&2 echo "Running bpftrace probes"
@@ -134,7 +134,7 @@ run_bpftrace() {
 }
 
 parse_bpftrace() {
-	if [ -n "$TRACER_DIR" ];
+	if [ -n "$BPFTRACE_EXEC" ];
 	then 
 		EXECID=$1
 		EXEC_SUCCESS=$2
