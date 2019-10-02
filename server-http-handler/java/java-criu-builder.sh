@@ -13,7 +13,12 @@ then
 	rm *.img
 	set -e
 
-	mvn install
+	SF_JAR_PATH=$3
+	if [ -z "$SF_JAR_PATH" ];
+	then
+		mvn install
+	fi
+
 	cd -
 elif [ $TYPE == "dump" ];
 then
