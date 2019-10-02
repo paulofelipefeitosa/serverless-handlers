@@ -30,7 +30,7 @@ bpftrace -B 'line' execve-clone-probes.bt <program_command> <executor_binary> > 
 ### Parse
 Running the execve, clone & fork probes parser.
 ```sh
-python -u execve-clone-probes-parser-bpftrace.py <executionID> <p_process_command_pattern_clone> <bin_pattern_execve> < $BPFTRACE_OUT
+python -u execve-clone-parser-bpftrace.py <executionID> < $BPFTRACE_OUT
 ```
 
 ## JVMTI Agent
@@ -46,4 +46,13 @@ gcc -shared -o libagent.so agent.o
 Running Java App with JVMTI Agent.
 ``` sh
 LD_LIBRARY_PATH=`pwd` java -agentlib:sample_agent=<output-filepath> Nothing
+```
+
+## CRIU
+
+### Parse
+
+Running CRIU restore statistics parser.
+```sh
+python -u criu-restore-parser.py <executionID> < <path-to-criu-restore-log>
 ```
