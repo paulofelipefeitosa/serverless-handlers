@@ -23,7 +23,7 @@ def main():
 			m = re.search(pattern, line)
 			if m:
 				eprint("Match: " + pattern + " :: " + label + " :: " + line)
-				timestamps[i] = float(m.group(1))
+				timestamps[i] = float(m.group(1)) * (10**9) # Convert timestamp to nanoseconds
 
 	final_timing = [0] + timestamps
 	for i in xrange(len(final_timing) - 1):
