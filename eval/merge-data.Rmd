@@ -296,3 +296,28 @@ write.csv(treated_nocriu_startup_bpf_ncl,
           file = "treated_nocriu_ncl_startup_bpftrace.csv",
           row.names = FALSE)
 ```
+
+### CRIU Restore
+
+#### Small
+
+```{r ncl_small_criu_restore_data}
+ncl_small_criu_restore <- load("java/criu-restore/server-http-handler-java-criu-noop-class-loader-1570104404-300-2-YES-tester-50c.jar-.csv", "NoOp Class Loader", "Java", "Prebaking Warm")
+ncl_small_criu_restore$Loaded_Classes <- "50"
+```
+
+#### Big
+
+```{r ncl_big_criu_restore_data}
+ncl_big_criu_restore <- load("java/criu-restore/server-http-handler-java-criu-noop-class-loader-1570056741-300-2-YES-tester-1k2.jar-.csv", "NoOp Class Loader", "Java", "Prebaking Warm")
+ncl_big_criu_restore$Loaded_Classes <- "1250"
+```
+
+```{r merge_criu_restore_data}
+ncl_criu_restore <- rbind(ncl_small_criu_restore, ncl_big_criu_restore) %>% rename("Value_NS" = "KernelTime_NS")
+
+write.csv(ncl_criu_restore,
+          file = "ncl_criu_restore.csv",
+          row.names = FALSE)
+```
+

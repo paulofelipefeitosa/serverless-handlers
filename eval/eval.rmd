@@ -543,3 +543,55 @@ ggplot(result, aes(x=app, y=value)) +
 
 ggsave("impact_function_size_vanilla.png")
 ```
+
+# CRIU Restore 
+
+ResolveSharedResources seria Resolve Shared Resources + Fork the process tree (checando dumps, mount procfs (~63% do tempo), faz fork da task root)
+ForkingTime seria só leitura das páginas de memória de todos os processos na árvore (faz fork das tasks childrens)
+Restore basic resources seria: tempo restaurando memory mappings exact location + file descriptors + timers + credentials + threads (Restore the rest)
+
+
+```{r criu_restore_desiccation, fig.asp=0.5}
+require(dplyr)
+require(ggplot2)
+require(ggpubr)
+
+read_ncl_criu_restore_stats <- function(f) {
+  df <- read.csv(f) %>% rename("Complexity" = "Loaded_Classes", "Value" = "Value_NS") %>% filter(ReqID == 0 & Metric %in% c("RuntimeReadyTime", "ResolveSharedResourcesTime", "ForkingTime", "RestoreResourcesTime", "SwitchRestoreContinueTime"))
+  rrt_rows <- which(df$Metric == "RuntimeReadyTime")
+  criu_stats_rows <- which(df$Metric != "RuntimeReadyTime")
+  df[rrt_rows, ]$Value <- df[rrt_rows, ]$Value / (10^6)
+  df[criu_stats_rows, ]$Value <- df[criu_stats_rows, ]$Value * (10^3)
+  df <- df %>% mutate(Complexity = ifelse(Complexity == "50", "Small", "Big"))
+  return(df)
+}
+criu_restore_stats <- read_ncl_criu_restore_stats("ncl_criu_restore.csv")
+
+calc_perc <- function(df){
+  df <- df %>%
+    filter(Metric != "RuntimeReadyTime") %>%
+    group_by(Runtime, App, Technique, Complexity, Metric) %>%
+    summarise(sum=sum(Value),
+              med=median(Value),
+              p99=quantile(Value, c(0.99))) %>%
+    mutate(perc=signif((sum/sum(sum))*100, digits=3))
+  return(df)
+}
+
+perc_criu_restore_stats <- calc_perc(criu_restore_stats)
+
+p <- c("yellowgreen", "skyblue4", "violetred4")  # from viridis color pallete.
+ggplot(perc_criu_restore_stats) +
+  geom_bar(aes(y = med, 
+               x = factor(Complexity, c("Small", "Big")), 
+               fill = factor(Metric, c("SwitchRestoreContinueTime", "RestoreResourcesTime", "ForkingTime", "ResolveSharedResourcesTime"))), 
+           stat = "identity") +
+  labs(fill = "Metric", x = "Function Size", y = "CRIU Restore Latency (ms)") +
+  #theme_pubclean() +
+  theme_bw() +
+  scale_fill_grey(start = 0, end = 0.85) +
+  theme(panel.grid.major.y = element_line(colour = "darkgray", linetype = 3),
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave("stacked_ncl_criu_restore_components_bar_plot.png")
+```
