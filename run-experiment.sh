@@ -23,6 +23,10 @@ do
 		SF_JAR_PATH="${i#*=}"
 		shift # past argument=value
 		;;
+		-ev=*|--evict=*) # Evict files from filesystem caching
+		EVICT="${i#*=}" # PAGES - Evict memory page file, ALL - All criu dump files, any other case - do not evict any file.
+		shift # past argument=value
+		;;
 		-warm|--warm_req) # Enable warm request
 		WARM_REQ=YES
 		shift # past argument with no value
@@ -73,6 +77,21 @@ build_criu_app() {
 
 	echo "Running $APP_DIR App"
 	bash $criu_builder "dump" $APP_DIR $HTTP_SERVER_ADDRESS $CRIU_APP_OUTPUT -scale=0.1 -image_path=$IMAGE_PATH -sfjar=$SF_JAR_PATH -warm=$WARM_REQ
+
+	cd $APP_DIR
+	if [ $EVICT == "ALL" ];
+	then
+		echo "Evicting all criu dump files"
+		FILES_LIST=$(ls | grep ".img$")
+		for file in $FILES_LIST
+		do
+			dd of="$file" oflag=nocache conv=notrunc,fdatasync count=0
+		done
+	elif [ $EVICT == "PAGES" ];
+	then
+		echo "Evicting the memory pages file"
+	fi
+	cd -
 }
 
 build_default_app() {
