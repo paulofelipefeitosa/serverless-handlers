@@ -83,14 +83,18 @@ build_criu_app() {
 	then
 		echo "Evicting all criu dump files"
 		FILES_LIST=$(ls | grep ".img$")
-		for file in $FILES_LIST
-		do
-			dd of="$file" oflag=nocache conv=notrunc,fdatasync count=0
-		done
 	elif [ $EVICT == "PAGES" ];
 	then
 		echo "Evicting the memory pages file"
+		FILES_LIST=$(ls | grep "pages.*\.img$")
+	else
+		FILES_LIST=""
 	fi
+	
+	for file in $FILES_LIST
+	do
+		dd of="$file" oflag=nocache conv=notrunc,fdatasync count=0
+	done
 	cd -
 }
 
