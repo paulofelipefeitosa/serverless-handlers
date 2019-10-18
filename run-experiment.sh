@@ -23,12 +23,12 @@ do
 		SF_JAR_PATH="${i#*=}"
 		shift # past argument=value
 		;;
-		-ev=*|--evict=*) # Evict files from filesystem caching
-		EVICT="${i#*=}" # PAGES - Evict memory page file, ALL - All criu dump files, any other case - do not evict any file.
-		shift # past argument=value
-		;;
 		-warm|--warm_req) # Enable warm request
 		WARM_REQ=YES
+		shift # past argument with no value
+		;;
+		-ios|--iostats) # Enable IO stats tracing
+		IO_STATS=YES
 		shift # past argument with no value
 		;;
 		*)
@@ -77,25 +77,6 @@ build_criu_app() {
 
 	echo "Running $APP_DIR App"
 	bash $criu_builder "dump" $APP_DIR $HTTP_SERVER_ADDRESS $CRIU_APP_OUTPUT -scale=0.1 -image_path=$IMAGE_PATH -sfjar=$SF_JAR_PATH -warm=$WARM_REQ
-
-	cd $APP_DIR
-	if [ $EVICT == "ALL" ];
-	then
-		echo "Evicting all criu dump files"
-		FILES_LIST=$(ls | grep ".img$")
-	elif [ $EVICT == "PAGES" ];
-	then
-		echo "Evicting the memory pages file"
-		FILES_LIST=$(ls | grep "pages.*\.img$")
-	else
-		FILES_LIST=""
-	fi
-	
-	for file in $FILES_LIST
-	do
-		dd of="$file" oflag=nocache conv=notrunc,fdatasync count=0
-	done
-	cd -
 }
 
 build_default_app() {
@@ -137,59 +118,7 @@ echo "Results filename [$RESULTS_FILENAME]"
 echo "Metric,ExecID,ReqID,KernelTime_NS" > $RESULTS_FILENAME
 
 BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$WARM_REQ-$SF_JAR_NAME-BPFTRACE.out
-run_bpftrace() {
-	if [ -n "$BPFTRACE_EXEC" ];
-	then 
-		killall -v -w bpftrace
-		>&2 echo "Running bpftrace probes"
-
-		bpftrace -B 'line' $TRACER_DIR/execve-clone-probes.bt ${EXP_APP_NAME:0:15} $TRACER_EB > $BPFTRACE_OUT &
-		BPFTRACER_PID=$!
-		>&2 echo "BPFTracer PID=$BPFTRACER_PID"
-
-		while [ $(wc -c "$BPFTRACE_OUT" | awk '{print $1}') -eq 0 ];
-		do
-			sleep 1
-		done
-
-		echo "$BPFTRACER_PID"
-	fi
-}
-
-parse_bpftrace() {
-	if [ -n "$BPFTRACE_EXEC" ];
-	then 
-		EXECID=$1
-		EXEC_SUCCESS=$2
-		BPFTRACER_PID=$3
-
-		PREVIOUS_LOG_SIZE=$(wc -c "$BPFTRACE_OUT" | awk '{print $1}')
-		echo "Killing bpftracer with pid=$BPFTRACER_PID"
-		kill -SIGINT $BPFTRACER_PID
-
-		if [ $EXEC_SUCCESS -eq 0 ];
-		then
-			while [ $(wc -c "$BPFTRACE_OUT" | awk '{print $1}') -eq $PREVIOUS_LOG_SIZE ];
-			do
-				sleep 1
-			done
-			set +e
-			python -u $TRACER_DIR/execve-clone-parser-bpftrace.py $EXECID < $BPFTRACE_OUT >> $RESULTS_FILENAME
-			set -e
-		fi
-	fi
-}
-
-parse_criu_logs() {
-	EXECID=$1
-	EXEC_SUCCESS=$2
-
-	if [ $EXEC_SUCCESS -eq 0 ];
-	then
-		python -u $TRACER_DIR/criu-restore-parser.py $EXECID < $APP_DIR/restore.log >> $RESULTS_FILENAME
-	fi
-}
-
+BCCTRACE_OUT=$(pwd)/$TYPE_DIR-$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$WARM_REQ-$SF_JAR_NAME-BCC.out
 for i in $(seq "$REP_EXEC")
 do
 	echo "REP_EXEC $i..."
@@ -205,7 +134,8 @@ do
 				build_criu_app
 				set -e
 
-				BPFTRACER_PID=$( run_bpftrace )
+				BPFTRACER_PID=$(bash clone-exec-bpftrace.sh run $BPFTRACE_OUT $EXP_APP_NAME $TRACER_EB)
+				BCCTRACER_PID=$(bash iostats-tracer.sh run $BCCTRACE_OUT)
 
 				echo "Running execute requests script"
 				set +e
@@ -216,13 +146,14 @@ do
 				echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
 				set -e
 
-				parse_bpftrace $i $EXECUTION_SUCCESS $BPFTRACER_PID
-				parse_criu_logs $i $EXECUTION_SUCCESS
+				bash clone-exec-bpftrace.sh parse $BPFTRACE_OUT $i $EXECUTION_SUCCESS $BPFTRACER_PID $RESULTS_FILENAME
+				bash criu-logs-tracer.sh parse $i $EXECUTION_SUCCESS $APP_DIR $RESULTS_FILENAME
 			else
 				echo "HTTP Server Handler"
 				build_default_app
 
-				BPFTRACER_PID=$( run_bpftrace )
+				BPFTRACER_PID=$(bash clone-exec-bpftrace.sh run $BPFTRACE_OUT $EXP_APP_NAME $TRACER_EB)
+				BCCTRACER_PID=$(bash iostats-tracer.sh run $BCCTRACE_OUT)
 
 				echo "Running execute requests script"
 				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $RUNTIME $APP_DIR $HANDLER_TYPE $SF_JAR_PATH >> $RESULTS_FILENAME
@@ -230,7 +161,7 @@ do
 
 				echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
 
-				parse_bpftrace $i $EXECUTION_SUCCESS $BPFTRACER_PID
+				bash clone-exec-bpftrace.sh parse $BPFTRACE_OUT $i $EXECUTION_SUCCESS $BPFTRACER_PID $RESULTS_FILENAME
 			fi
 		else
 			echo "Could not identify the experiment type [$TYPE_DIR]"

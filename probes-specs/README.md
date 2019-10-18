@@ -1,22 +1,21 @@
 # Experiments Probes
 
-## BCC
+## I/O Operations
 
 ### Install
 [BCC Tool Install](https://github.com/iovisor/bcc/blob/master/INSTALL.md).
 
 ### Run
 ```sh
-python -u clone-exec-dtpp.py -ne <execve-pattern> -nc <clone-pattern> > $BCC_TOOL_OUT &
+python -u biosnoop.py > $BCC_TOOL_OUT &
 ```
 
 ### Parse
-Running the execve, clone & fork probes parser.
+Running the I/O stats parser.
 ```sh
-python -u execve-clone-probes-parser-bcc.py <executionID> < $BCC_TOOL_OUT
 ```
 
-## BPFTrace
+## Clone and Execve Traces
 
 ### Install
 [BPFTrace Install](https://github.com/iovisor/bpftrace/blob/master/INSTALL.md).
