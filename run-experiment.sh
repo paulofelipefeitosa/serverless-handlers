@@ -134,8 +134,8 @@ do
 				build_criu_app
 				set -e
 
-				BPFTRACER_PID=$(bash clone-exec-bpftrace.sh run $BPFTRACE_OUT $EXP_APP_NAME $TRACER_EB)
-				BCCTRACER_PID=$(bash iostats-tracer.sh run $BCCTRACE_OUT)
+				BPFTRACER_PID=$(EXEC=$BPFTRACE_EXEC bash clone-exec-bpftrace.sh run $BPFTRACE_OUT $EXP_APP_NAME $TRACER_EB)
+				BCCTRACER_PID=$(EXEC=$IO_STATS bash iostats-tracer.sh run $BCCTRACE_OUT)
 
 				echo "Running execute requests script"
 				set +e
@@ -153,8 +153,8 @@ do
 				echo "HTTP Server Handler"
 				build_default_app
 
-				BPFTRACER_PID=$(bash clone-exec-bpftrace.sh run $BPFTRACE_OUT $EXP_APP_NAME $TRACER_EB)
-				BCCTRACER_PID=$(bash iostats-tracer.sh run $BCCTRACE_OUT)
+				BPFTRACER_PID=$(EXEC=$BPFTRACE_EXEC bash clone-exec-bpftrace.sh run $BPFTRACE_OUT $EXP_APP_NAME $TRACER_EB)
+				BCCTRACER_PID=$(EXEC=$IO_STATS bash iostats-tracer.sh run $BCCTRACE_OUT)
 
 				echo "Running execute requests script"
 				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $RUNTIME $APP_DIR $HANDLER_TYPE $SF_JAR_PATH >> $RESULTS_FILENAME
