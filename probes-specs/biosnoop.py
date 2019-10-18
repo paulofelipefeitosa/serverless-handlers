@@ -36,6 +36,12 @@ debug = 0
 bpf_text="""
 #include <uapi/linux/ptrace.h>
 #include <linux/blkdev.h>
+
+struct val_t {
+    u32 pid;
+    char name[TASK_COMM_LEN];
+};
+
 struct data_t {
     u32 pid;
     u64 rwflag;
@@ -43,18 +49,40 @@ struct data_t {
     char disk_name[DISK_NAME_LEN];
     char name[TASK_COMM_LEN];
 };
+
+BPF_HASH(infobyreq, struct request *, struct val_t);
 BPF_PERF_OUTPUT(events);
+
+// cache PID and comm by-req
+int trace_pid_start(struct pt_regs *ctx, struct request *req)
+{
+    struct val_t val = {};
+    if (bpf_get_current_comm(&val.name, sizeof(val.name)) == 0) {
+        val.pid = bpf_get_current_pid_tgid() >> 32;
+        infobyreq.update(&req, &val);
+    }
+    return 0;
+}
+
 // output
 int trace_req_completion(struct pt_regs *ctx, struct request *req)
 {
+    struct val_t *valp;
     struct data_t data = {};
-    if (bpf_get_current_comm(&data.name, sizeof(data.name)) == 0) {
-        data.pid = bpf_get_current_pid_tgid() >> 32;
+    
+    valp = infobyreq.lookup(&req);
+    if (valp == 0) {
         data.len = req->__data_len;
+        strcpy(data.name, "?");
+    } else {
+        data.pid = valp->pid;
+        data.len = req->__data_len;
+        bpf_probe_read(&data.name, sizeof(data.name), valp->name);
         struct gendisk *rq_disk = req->rq_disk;
         bpf_probe_read(&data.disk_name, sizeof(data.disk_name),
                        rq_disk->disk_name);
     }
+
 /*
  * The following deals with a kernel version change (in mainline 4.7, although
  * it may be backported to earlier kernels) with how block request write flags
@@ -81,8 +109,8 @@ if debug or args.ebpf:
 
 # initialize BPF
 b = BPF(text=bpf_text)
-b.attach_kprobe(event="blk_account_io_completion",
-    fn_name="trace_req_completion")
+b.attach_kprobe(event="blk_account_io_start", fn_name="trace_pid_start")
+b.attach_kprobe(event="blk_account_io_completion", fn_name="trace_req_completion")
 
 # header
 print("%-14s %-6s %-7s %-1s %-7s\n" % ("COMM", "PID",
