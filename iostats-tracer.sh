@@ -18,7 +18,16 @@ then
 	echo "$TRACER_PID"
 elif [ $TYPE == "parse" ];
 then
-	# TODO
+	EXEC_SUCCESS=$3
+	TRACER_PID=$4
+
+	echo "Killing BCC tracer with pid=$TRACER_PID"
+	kill -SIGINT $TRACER_PID
+
+	if [ $EXEC_SUCCESS -eq 0 ];
+	then
+		sync
+	fi
 else
 	echo "Cannot identify tracer behavior type [$TYPE]"
 	exit 1

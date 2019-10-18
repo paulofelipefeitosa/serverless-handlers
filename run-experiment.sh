@@ -147,6 +147,7 @@ do
 				set -e
 
 				bash clone-exec-bpftrace.sh parse $BPFTRACE_OUT $i $EXECUTION_SUCCESS $BPFTRACER_PID $RESULTS_FILENAME
+				bash iostats-tracer.sh parse $BCCTRACE_OUT $EXECUTION_SUCCESS $BCCTRACER_PID
 				bash criu-logs-tracer.sh parse $i $EXECUTION_SUCCESS $APP_DIR $RESULTS_FILENAME
 			else
 				echo "HTTP Server Handler"
@@ -162,6 +163,7 @@ do
 				echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
 
 				bash clone-exec-bpftrace.sh parse $BPFTRACE_OUT $i $EXECUTION_SUCCESS $BPFTRACER_PID $RESULTS_FILENAME
+				bash iostats-tracer.sh parse $BCCTRACE_OUT $EXECUTION_SUCCESS $BCCTRACER_PID
 			fi
 		else
 			echo "Could not identify the experiment type [$TYPE_DIR]"
