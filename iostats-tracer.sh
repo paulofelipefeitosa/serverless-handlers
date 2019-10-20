@@ -5,7 +5,7 @@ then
 
 	if [ $TYPE == "run" ];
 	then
-		pkill -f "python biosnoop.py"
+		pkill -f -e "python -u probes-specs/biosnoop.py"
 		>&2 echo "Running I/O stats BCC probes"
 
 		python -u probes-specs/biosnoop.py > $TRACER_OUTPUT &
@@ -24,7 +24,7 @@ then
 		TRACER_PID=$4
 
 		echo "Killing BCC tracer with pid=$TRACER_PID"
-		kill -SIGINT $TRACER_PID
+		kill $TRACER_PID
 
 		if [ $EXEC_SUCCESS -eq 0 ];
 		then
