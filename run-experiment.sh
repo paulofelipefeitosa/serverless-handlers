@@ -11,10 +11,6 @@ HANDLER_TYPE=$7 # criu or no-criu
 for i in "$@"
 do
 	case $i in
-		-t=*|--tracer_dir=*) # Tracer directory
-		TRACER_DIR="${i#*=}"
-		shift # past argument=value
-		;;
 		-t_eb=*|--tracer_executor_binary=*) # Tracer executor binary path
 		TRACER_EB="${i#*=}"
 		shift # past argument=value

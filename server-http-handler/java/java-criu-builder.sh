@@ -11,7 +11,6 @@ then
 	echo "Remove any previous dump files"
 	set +e
 	rm *.img
-	set -e
 
 	SF_JAR_PATH=$3
 	if [ -z "$SF_JAR_PATH" ];

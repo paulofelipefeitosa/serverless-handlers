@@ -11,7 +11,6 @@ then
 	echo "Remove any previous dump files"
 	set +e
 	rm *.img
-	set -e
 
 	cd -
 elif [ $TYPE == "dump" ];
