@@ -66,11 +66,11 @@ then
 	if [ $DUMP_EXIT_STATUS -ne 0 ];
 	then
 		echo "Dump App $APP_DIR failed"
-		exit 1
+		return 18
 	fi
 
 	cd -
 else
 	echo "Cannot identify builder behavior type [$TYPE]"
-	exit 1
+	return 1
 fi
