@@ -546,6 +546,8 @@ ggsave("impact_function_size_vanilla.png")
 
 # CRIU Restore 
 
+
+
 ResolveSharedResources seria Resolve Shared Resources + Fork the process tree (checando dumps, mount procfs (~63% do tempo), faz fork da task root)
 ForkingTime seria só leitura das páginas de memória de todos os processos na árvore (faz fork das tasks childrens)
 Restore basic resources seria: tempo restaurando memory mappings exact location + file descriptors + timers + credentials + threads (Restore the rest)

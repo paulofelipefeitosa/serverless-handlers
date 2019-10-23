@@ -302,19 +302,29 @@ write.csv(treated_nocriu_startup_bpf_ncl,
 #### Small
 
 ```{r ncl_small_criu_restore_data}
-ncl_small_criu_restore <- load("java/criu-restore/server-http-handler-java-criu-noop-class-loader-1570104404-300-2-YES-tester-50c.jar-.csv", "NoOp Class Loader", "Java", "Prebaking Warm")
+ncl_small_criu_restore <- load("java/criu-restore/page-cache/server-http-handler-java-criu-noop-class-loader-1570104404-300-2-YES-tester-50c.jar-.csv", "NoOp Class Loader", "Java", "Prebaking Warm")
 ncl_small_criu_restore$Loaded_Classes <- "50"
+ncl_small_criu_restore$Type <- "PageCache"
+
+ncl_small_criu_restore_disk <- load("java/criu-restore/disk/server-http-handler-java-criu-noop-class-loader-1571705685-300-2-YES-tester-50c.jar-.csv", "NoOp Class Loader", "Java", "Prebaking Warm")
+ncl_small_criu_restore_disk$Loaded_Classes <- "50"
+ncl_small_criu_restore_disk$Type <- "Disk"
 ```
 
 #### Big
 
 ```{r ncl_big_criu_restore_data}
-ncl_big_criu_restore <- load("java/criu-restore/server-http-handler-java-criu-noop-class-loader-1570056741-300-2-YES-tester-1k2.jar-.csv", "NoOp Class Loader", "Java", "Prebaking Warm")
+ncl_big_criu_restore <- load("java/criu-restore/page-cache/server-http-handler-java-criu-noop-class-loader-1570056741-300-2-YES-tester-1k2.jar-.csv", "NoOp Class Loader", "Java", "Prebaking Warm")
 ncl_big_criu_restore$Loaded_Classes <- "1250"
+ncl_big_criu_restore$Type <- "PageCache"
+
+ncl_big_criu_restore_disk <- load("java/criu-restore/disk/server-http-handler-java-criu-noop-class-loader-1571670210-300-2-YES-tester-1k2.jar-.csv", "NoOp Class Loader", "Java", "Prebaking Warm")
+ncl_big_criu_restore_disk$Loaded_Classes <- "1250"
+ncl_big_criu_restore_disk$Type <- "Disk"
 ```
 
 ```{r merge_criu_restore_data}
-ncl_criu_restore <- rbind(ncl_small_criu_restore, ncl_big_criu_restore) %>% rename("Value_NS" = "KernelTime_NS")
+ncl_criu_restore <- rbind(ncl_small_criu_restore, ncl_big_criu_restore, ncl_small_criu_restore_disk, ncl_big_criu_restore_disk) %>% rename("Value_NS" = "KernelTime_NS")
 
 write.csv(ncl_criu_restore,
           file = "ncl_criu_restore.csv",
