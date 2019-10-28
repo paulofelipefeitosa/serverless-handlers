@@ -1,0 +1,6 @@
+#!/bin/sh
+
+set -euo pipefail
+
+# CRIU Restore
+java -jar $LAMBDA_TASK_ROOT/app.jar
