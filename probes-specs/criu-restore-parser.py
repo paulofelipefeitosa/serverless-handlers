@@ -5,7 +5,7 @@ def eprint(string):
     sys.stderr.write(string)
 
 def print_metric(metric, exec_id, metric_value):
-    print ("%s,%s,%s,%f" % (metric, exec_id, "0", metric_value))
+    print ("%s,%s,%s,%d" % (metric, exec_id, "0", metric_value))
 
 def main():
 	EXEC_ID = sys.argv[1]
@@ -13,7 +13,7 @@ def main():
 	patterns = [("\(([0-9]+\.[0-9]+)\) Switching to 2 stage$", "ResolveSharedResourcesTime"), 
 	("\(([0-9]+\.[0-9]+)\) Switching to 3 stage$", "ForkingTime"), 
 	("\(([0-9]+\.[0-9]+)\) Switching to 4 stage$", "RestoreResourcesTime"), 
-	("\(([0-9]+\.[0-9]+)\) end of execution$", "SwitchRestoreContinueTime")]
+	("\(([0-9]+\.[0-9]+)\) Writing stats$", "SwitchRestoreContinueTime")]
 
 	timestamps = [0]*len(patterns)
 
@@ -23,7 +23,7 @@ def main():
 			m = re.search(pattern, line)
 			if m:
 				eprint("Match: " + pattern + " :: " + label + " :: " + line)
-				timestamps[i] = float(m.group(1))
+				timestamps[i] = float(m.group(1)) * (10**9) # Convert timestamp to nanoseconds
 
 	final_timing = [0] + timestamps
 	for i in xrange(len(final_timing) - 1):
