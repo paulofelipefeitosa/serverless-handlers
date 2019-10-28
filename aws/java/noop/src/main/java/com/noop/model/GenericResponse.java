@@ -7,14 +7,20 @@ package com.noop.model;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Response {
+public class GenericResponse {
 
     private int statusCode = 200;
     private String body;
     private Map<String, String> headers;
 
-    public Response() {
+    public GenericResponse() {
         this.body = "";
+        this.headers = new HashMap<String, String>();
+    }
+
+    public GenericResponse(String body) {
+        super();
+        this.body = body;
         this.headers = new HashMap<String, String>();
     }
 

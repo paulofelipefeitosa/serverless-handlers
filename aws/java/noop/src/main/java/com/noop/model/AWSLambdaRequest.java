@@ -25,4 +25,8 @@ public class AWSLambdaRequest {
         return headers;
     }
 
+    public GenericRequest getGenericRequest() {
+        return new GenericRequest(this.payload, this.headers);
+    }
+
 }
