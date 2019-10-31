@@ -1,0 +1,31 @@
+import time
+
+def get_monotonic_clock():
+    return int(time.monotonic() * 1e9)
+
+print('EIM: %d' % get_monotonic_clock())
+
+from flask import Flask, request
+from gevent.pywsgi import WSGIServer
+import handler
+ 
+app = Flask(__name__)
+ 
+@app.route("/", methods=["POST", "GET"])
+def main_route():
+    warm_req = request.headers.get("X-Warm-Request", None) == 'true'
+    if not warm_req:
+        print('T4: %d' % get_monotonic_clock())
+    
+    (ret, load_stats) = hand.handle(request)
+    
+    if not warm_req:
+        print('T6: %d' % get_monotonic_clock() + '\n' + load_stats)
+
+    return ret.__close__()
+ 
+if __name__ == '__main__':
+    http_server = WSGIServer(('', 9000), app)
+    hand = handler.Handler()
+    print('EFM: %d' % get_monotonic_clock())
+    http_server.serve_forever()
