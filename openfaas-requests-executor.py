@@ -1,7 +1,7 @@
 import time, requests, sys
 
 def get_replicas_number(json_response):
-	return int(json_response['replicas'])
+	return int(json_response['availableReplicas'])
 
 def ensure_scale_from_zero(protocol, gateway_address, function_name, reconciliation_time, max_tries):
 	count = 0
@@ -13,6 +13,7 @@ def ensure_scale_from_zero(protocol, gateway_address, function_name, reconciliat
 			n_replicas = get_replicas_number(info_req.json())
 			
 			if(n_replicas == 0):
+				print ("Zero replicas")
 				break
 			elif(count > max_tries):
 				message = 'Too much tries, please ensure the zero scale funcionality in OpenFaaS [gateway configuration, faas-idler configuration and function deployment configuration]'
@@ -86,6 +87,6 @@ def main():
 			print repr(e)
 			continue
 
-	csv_file.close()
+	#csv_file.close()
 
 main()
