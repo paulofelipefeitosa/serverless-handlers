@@ -1,5 +1,8 @@
 import time, requests, sys
 
+def get_monotonic_clock():
+    return int(time.monotonic() * 1e9)
+
 def get_replicas_number(json_response):
 	return int(json_response['availableReplicas'])
 
@@ -28,10 +31,12 @@ def ensure_scale_from_zero(protocol, gateway_address, function_name, reconciliat
 
 def function_request(protocol, gateway_address, function_name):
 	req_url = protocol + gateway_address + '/function/' + function_name
+	start_ts = get_monotonic_clock()
 	response = requests.post(req_url, data={})
+	end_ts = get_monotonic_clock()
 
 	if(int(response.status_code) < 300):
-		return (response.headers, response.content)
+		return (response.headers, response.content, end_ts - start_ts)
 	else:
 		message = 'Request to [' + req_url + '] status response [' + str(response.status_code) + ']'
 		raise RuntimeError('Request error: ' + message)
