@@ -64,13 +64,13 @@ def main():
 	csv_file = open(function_name + '-' + str(total_requests) + '-' + str(int(time.time())) + '.csv', 'w')
 	csv_file.write('Req_Id,AppStartup_Time,Duration_Time,Latency_Time\n')
 
-	for req_id in xrange(total_requests):
+	for req_id in range(total_requests):
 		print (req_id)
 		try:
 			ensure_scale_from_zero(protocol, gateway_address, function_name, reconciliation_time, max_tries)
 			(headers, response, latency) = function_request(protocol, gateway_address, function_name)
 			metrics = get_ordered_metrics(headers, response, criu_exec == 'y')
-			ts_str = str(req_id) + ',' + ",".join(metrics) + ',' + str(latency) + '\n'
+			ts_str = str(req_id) + ',' + ",".join([str(i) for i in metrics]) + ',' + str(latency) + '\n'
 			csv_file.write(ts_str)
 			print (ts_str)
 		except Exception as e:
