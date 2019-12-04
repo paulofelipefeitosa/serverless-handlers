@@ -31,29 +31,18 @@ def function_request(protocol, gateway_address, function_name):
 	response = requests.post(req_url, data={})
 
 	if(int(response.status_code) < 300):
-		return (response.headers, response.json())
+		return (response.headers, response.content)
 	else:
 		message = 'Request to [' + req_url + '] status response [' + str(response.status_code) + ']'
 		raise RuntimeError('Request error: ' + message)
 
-def get_ordered_timestamps(headers, response):
-	return [headers['X-Scale-Start-Time'], headers['X-Scale-Post-Send-Time'], headers['X-Scale-Post-Response-Time'], 
-		response['Container-startup-time'], headers['X-Start-Time'], headers['X-Watchdog-Startup-Time'], 
-		headers['X-Prepare-Fork-Time'], headers['X-Fork-Startup-Time'], response['JVMStartTime'], response['ReadyTime'], 
-		response['ReadyToProcessTime'], headers['X-Fork-End-Time'], headers['X-Wait-Time'], headers['X-Duration-Seconds']]
-
-def normalize_data(timestamps):
-	max_size = 0
-	for i in xrange(len(timestamps)):
-		timestamps[i] = str(timestamps[i])
-		length = len(timestamps[i])
-		if(length > max_size):
-			max_size = length
-
-	for i in xrange(len(timestamps)):
-		timestamps[i] = timestamps[i] + ('0' * (max_size - len(timestamps[i])))
-
-	return timestamps
+def get_ordered_metrics(headers, response, is_criu_exec):
+	duration_time = int(float(headers['X-Duration-Seconds']) * (10**9))
+	if is_criu_exec:
+		app_startup_time = int(headers['X-Restore-Time'])
+	else:
+		app_startup_time = 0 # get from response
+	return [app_startup_time, duration_time]
 
 def main():
 	args = sys.argv
@@ -65,28 +54,24 @@ def main():
 	gateway_address = args[1]
 	function_name = args[2]
 	total_requests = int(args[3])
+	criu_exec = args[4] # y or n
 
-	#csv_file = open(function_name + '-' + str(total_requests) + '-' + str(int(time.time())) + '.csv', 'w')
-	#csv_file.write('Req_Id,Arrival_Gateway,Send_Set_Replicas_Swarm,Response_Set_Replicas_Swarm,Container_Running,' +
-	#	'Proxy_Handler_Gateway,Watchdog_Running,Receive_Request_Watchdog,Run_Function_Watchdog,JVM_Startup_Time,' + 
-	#	'Running_Function,Processing_Function,Finish_Function_Watchdog,Wait_Run_Function_Watchdog,Function_Duration_Watchdog\n')
+	csv_file = open(function_name + '-' + str(total_requests) + '-' + str(int(time.time())) + '.csv', 'w')
+	csv_file.write('Req_Id,AppStartup_Time,Duration_Time,Latency_Time\n')
 
 	for req_id in xrange(total_requests):
 		print req_id
 		try:
 			ensure_scale_from_zero(protocol, gateway_address, function_name, reconciliation_time, max_tries)
-			(headers, response) = function_request(protocol, gateway_address, function_name)
-			#timestamps = get_ordered_timestamps(headers, response['timestamps'])
-			#timestamps = normalize_data(timestamps)
-			#ts_str = str(req_id) + ',' + ",".join(timestamps) + '\n'
-			#csv_file.write(ts_str)
-			#print ts_str
-			print headers
-			print response
+			(headers, response, latency) = function_request(protocol, gateway_address, function_name)
+			metrics = get_ordered_metrics(headers, response, criu_exec == 'y')
+			ts_str = str(req_id) + ',' + ",".join(metrics) + ',' + str(latency) '\n'
+			csv_file.write(ts_str)
+			print ts_str
 		except Exception as e:
 			print repr(e)
 			continue
 
-	#csv_file.close()
+	csv_file.close()
 
 main()
