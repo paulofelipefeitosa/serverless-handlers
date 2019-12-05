@@ -41,12 +41,9 @@ def function_request(protocol, gateway_address, function_name):
 		message = 'Request to [' + req_url + '] status response [' + str(response.status_code) + ']'
 		raise RuntimeError('Request error: ' + message)
 
-def get_ordered_metrics(headers, response, is_criu_exec):
+def get_ordered_metrics(headers, response):
 	duration_time = int(float(headers['X-Duration-Seconds']) * (10**9))
-	if is_criu_exec:
-		app_startup_time = int(headers['X-Restore-Time'])
-	else:
-		app_startup_time = 0 # get from response
+	app_startup_time = int(headers['X-App-Startup-Time'])
 	return [app_startup_time, duration_time]
 
 def main():
@@ -59,7 +56,6 @@ def main():
 	gateway_address = args[1]
 	function_name = args[2]
 	total_requests = int(args[3])
-	criu_exec = args[4] # y or n
 
 	csv_file = open(function_name + '-' + str(total_requests) + '-' + str(int(time.time())) + '.csv', 'w')
 	csv_file.write('Req_Id,AppStartup_Time,Duration_Time,Latency_Time\n')
@@ -69,7 +65,7 @@ def main():
 		try:
 			ensure_scale_from_zero(protocol, gateway_address, function_name, reconciliation_time, max_tries)
 			(headers, response, latency) = function_request(protocol, gateway_address, function_name)
-			metrics = get_ordered_metrics(headers, response, criu_exec == 'y')
+			metrics = get_ordered_metrics(headers, response)
 			ts_str = str(req_id) + ',' + ",".join([str(i) for i in metrics]) + ',' + str(latency) + '\n'
 			csv_file.write(ts_str)
 			print (ts_str)
