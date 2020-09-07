@@ -163,7 +163,7 @@ do
 			fi
 		else
 			echo "Could not identify the experiment type [$TYPE_DIR]"
-			exit -1
+			exit 1
 		fi
 	done
 done

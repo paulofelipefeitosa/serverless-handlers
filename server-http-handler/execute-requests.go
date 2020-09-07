@@ -1,36 +1,37 @@
 package main
-import(
-	"os"
-	"os/exec"
-	"log"
-	"time"
-	"net/http"
-	"strconv"
+
+import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"os/exec"
 	"strings"
+	"time"
 	_ "unsafe" // For go:linkname
 )
 
 //go:noescape
 //go:linkname nanotime runtime.nanotime
-func nanotime() int64 
+func nanotime() int64
 
 // Get monotonic clock time to be compatible with the bpftrace timestamps
 func Now() int64 {
-	return int64(nanotime())
+	return nanotime()
 }
 
 func startCRIUServer(appDir string, serverLogFile string) (*exec.Cmd, io.ReadCloser, error) {
 	fmt.Fprintln(os.Stderr, "Criu Handler Type")
 	upServerCmd := exec.Command("criu", "restore", "-d", "-v3", "-o", "restore.log")
 	upServerCmd.Env = os.Environ()
-	
+
 	currentDir, _ := os.Getwd()
 	upServerCmd.Dir = fmt.Sprintf("%s/%s", currentDir, appDir)
 	fmt.Fprintf(os.Stderr, "Dir [%s]\n", upServerCmd.Dir)
-	
+
 	serverStdout, err := os.Open(serverLogFile)
 	return upServerCmd, serverStdout, err
 }
@@ -46,7 +47,7 @@ func startDefaultServer(runtime string, appDir string, args string) (*exec.Cmd, 
 		upServerCmd = exec.Command("python3", "-u", fmt.Sprintf("%s/app.py", appDir), args)
 	}
 	upServerCmd.Env = os.Environ()
-	
+
 	serverStdout, err := upServerCmd.StdoutPipe()
 	if err != nil {
 		log.Fatal(err)
@@ -57,52 +58,64 @@ func startDefaultServer(runtime string, appDir string, args string) (*exec.Cmd, 
 
 func checkIfFileExists(filePath string) {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		fmt.Fprintln(os.Stderr, "File [%s] does not exists", filePath)
+		fmt.Fprintf(os.Stderr, "File [%s] does not exists\n", filePath)
 		log.Fatal(err)
 	}
 }
 
 func checkEmpty(key string, value string) {
 	if strings.Trim(key, "") == "" {
-		fmt.Fprintln(os.Stderr, "%s argument is empty", value)
+		fmt.Fprintf(os.Stderr, "%s argument is empty\n", value)
 		os.Exit(1) // bad args
 	}
 }
 
 func main() {
-	serverAddress := os.Args[1]
-	endpoint := os.Args[2]
-	nRequests, err := strconv.ParseInt(os.Args[3], 10, 64)
-	executionID := os.Args[4]
-	runtime := os.Args[5]
-	appDir := os.Args[6]
-	handlerType := os.Args[7]
-	
+	serverAddr := os.Args[1]
+	executionID := os.Args[2]
+	runtime := os.Args[3]
+	appDir := os.Args[4]
+	handlerType := os.Args[5]
+	configPath := os.Args[6]
+
 	var optPath string
 	var classLoadStats bool
-	if len(os.Args) > 8 {
-		optPath = os.Args[8] // Synthetic Function JAR File Path or Server Log File
+	if len(os.Args) > 7 {
+		optPath = os.Args[7] // Synthetic Function JAR File Path or Server Log File
 		classLoadStats = (handlerType != "criu") && (optPath != "")
 	} else {
 		optPath = ""
 		classLoadStats = false
 	}
 
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Amount of Requests is not an integer, given value %s", os.Args[3])
-		log.Fatal(err)
-	}
-	checkEmpty(serverAddress, "serverAddress")
-	checkEmpty(endpoint, "endpoint")
+	checkEmpty(serverAddr, "serverAddr")
 	checkEmpty(executionID, "executionID")
 	checkEmpty(handlerType, "handlerType")
+	checkIfFileExists(configPath)
 	if classLoadStats || (handlerType == "criu") {
 		checkIfFileExists(optPath)
 	}
 
-	functionURL := fmt.Sprintf("http://%s%s", serverAddress, endpoint)
+	cfgFile, err := os.Open(configPath)
+	if err != nil {
+		log.Fatalf("cannot open config file (%s) due to (%v)", configPath, err)
+	}
+	cfgContent, err := ioutil.ReadAll(cfgFile)
+	if err != nil {
+		log.Fatalf("cannot read config file (%s) due to (%v)", configPath, err)
+	}
+	cfg := &ExecutionConfig{}
+	err = json.Unmarshal(cfgContent, cfg)
+	if err != nil {
+		log.Fatalf("cannot deserialize the content of config file (%s), due to (%v)", configPath, err)
+	}
+	req, err := cfg.Request.HTTPRequest(serverAddr)
+	if err != nil {
+		log.Fatal("cannot create request to sent to functions due to (%v)", err)
+	}
+	cli := &http.Client{}
 
-	var upServerCmd* exec.Cmd
+	var upServerCmd *exec.Cmd
 	var serverStdout, serverStderr io.ReadCloser
 	if handlerType == "criu" {
 		upServerCmd, serverStdout, err = startCRIUServer(appDir, optPath)
@@ -118,8 +131,8 @@ func main() {
 	if err := upServerCmd.Start(); err != nil {
 		log.Fatal(err)
 	}
-	
-	reqStatsNS, err := getHTTPServerReadyAndServiceTS(functionURL, serverStdout, classLoadStats)
+
+	reqStatsNS, err := getHTTPServerReadyAndServiceTS(cli, req, serverStdout, classLoadStats)
 	fmt.Fprintln(os.Stderr, "Got Ready Time")
 
 	if err != nil {
@@ -134,7 +147,7 @@ func main() {
 			serverStderr.Close()
 		}
 		serverStdout.Close()
-		
+
 		// Kill Http server process
 		if err := upServerCmd.Process.Kill(); err != nil {
 			log.Fatal("failed to kill process: ", err)
@@ -146,26 +159,26 @@ func main() {
 
 	// Apply requests
 	fmt.Fprintln(os.Stderr, "Applying requests")
-	roundTripTime, serviceTime := getRoundTripAndServiceTime(nRequests, functionURL, serverStdout)
+	roundTripTime, serviceTime := getRoundTripAndServiceTime(cli, cfg.RequestAmount, req, serverStdout)
 
 	// Write results
 	fmt.Fprintln(os.Stderr, "Writing results")
 	fmt.Printf("%s,%s,%d,%d\n", "MainEntry", executionID, 0, reqStatsNS[0])
 	fmt.Printf("%s,%s,%d,%d\n", "MainExit", executionID, 0, reqStatsNS[1])
 	fmt.Printf("%s,%s,%d,%d\n", "Ready2Serve", executionID, 0, reqStatsNS[2])
-	fmt.Printf("%s,%s,%d,%d\n", "RuntimeReadyTime", executionID, 0, reqStatsNS[2] - startHTTPServerNanoTS)
-	fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, 0, reqStatsNS[3] - reqStatsNS[2])
-	fmt.Printf("%s,%s,%d,%d\n", "LatencyTime", executionID, 0, reqStatsNS[3] - startHTTPServerNanoTS)
+	fmt.Printf("%s,%s,%d,%d\n", "RuntimeReadyTime", executionID, 0, reqStatsNS[2]-startHTTPServerNanoTS)
+	fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, 0, reqStatsNS[3]-reqStatsNS[2])
+	fmt.Printf("%s,%s,%d,%d\n", "LatencyTime", executionID, 0, reqStatsNS[3]-startHTTPServerNanoTS)
 	if classLoadStats {
 		fmt.Printf("%s,%s,%d,%d\n", "LoadedClasses", executionID, 0, reqStatsNS[6])
 		fmt.Printf("%s,%s,%d,%d\n", "FindingClassesTime", executionID, 0, reqStatsNS[4])
 		fmt.Printf("%s,%s,%d,%d\n", "CompilingClassesTime", executionID, 0, reqStatsNS[5])
 		fmt.Printf("%s,%s,%d,%d\n", "LoadClassesTotalTime", executionID, 0, reqStatsNS[7])
-		fmt.Printf("%s,%s,%d,%d\n", "LoadingClassesOverheadTime", executionID, 0, reqStatsNS[7] - reqStatsNS[4] - reqStatsNS[5])
+		fmt.Printf("%s,%s,%d,%d\n", "LoadingClassesOverheadTime", executionID, 0, reqStatsNS[7]-reqStatsNS[4]-reqStatsNS[5])
 	}
 	for i := 1; i <= len(roundTripTime); i++ {
-		fmt.Printf("%s,%s,%d,%d\n", "LatencyTime", executionID, i, roundTripTime[i - 1])
-		fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, i, serviceTime[i - 1])
+		fmt.Printf("%s,%s,%d,%d\n", "LatencyTime", executionID, i, roundTripTime[i-1])
+		fmt.Printf("%s,%s,%d,%d\n", "ServiceTime", executionID, i, serviceTime[i-1])
 	}
 
 	if serverStderr != nil {
@@ -186,29 +199,31 @@ func main() {
 	os.Exit(0)
 }
 
-func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverStdout io.ReadCloser) ([]int64, []int64) {
+func getRoundTripAndServiceTime(cli *http.Client, nRequests int, req *http.Request, serverStdout io.ReadCloser) ([]int64, []int64) {
 	var roundTripTime, serviceTime []int64
-	for i := int64(1); i < nRequests; i++ {
-		response, err, sendRequestNanoTS, receiveResponseNanoTS := sendRequest2(functionURL)
-		if err == nil && response.StatusCode == http.StatusOK {
-			defer response.Body.Close()
-			io.Copy(ioutil.Discard, response.Body)
+	for i := 1; i < nRequests; i++ {
+		sendTS := Now()
+		resp, err := cli.Do(req)
+		responseTS := Now()
+		if err == nil && resp.StatusCode == http.StatusOK {
+			io.Copy(ioutil.Discard, resp.Body)
+			resp.Body.Close()
 			var startServiceNanoTS, endServiceNanoTS int64
 			fmt.Fscanf(serverStdout, "T4: %d", &startServiceNanoTS)
 			fmt.Fscanf(serverStdout, "T6: %d", &endServiceNanoTS)
-			
-			roundTripTime = append(roundTripTime, receiveResponseNanoTS - sendRequestNanoTS)
-			serviceTime = append(serviceTime, endServiceNanoTS - startServiceNanoTS)
+
+			roundTripTime = append(roundTripTime, responseTS-sendTS)
+			serviceTime = append(serviceTime, endServiceNanoTS-startServiceNanoTS)
 		} else {
 			if err != nil {
 				log.Fatal(err)
 			}
-			defer response.Body.Close()
-			respBody, err := ioutil.ReadAll(response.Body)
+			respBody, err := ioutil.ReadAll(resp.Body)
+			resp.Body.Close()
 			if err == nil {
-				log.Fatalf("Server is up, but HTTP response is not OK! StatusCode: %d, Request Response: %s\n", response.StatusCode, respBody)
+				log.Fatalf("Server is up, but HTTP resp is not OK! StatusCode: %d, Request Response: %s\n", resp.StatusCode, respBody)
 			} else {
-				log.Printf("Server is up, but HTTP response is not OK! StatusCode: %d\n", response.StatusCode)
+				log.Printf("Server is up, but HTTP resp is not OK! StatusCode: %d\n", resp.StatusCode)
 				log.Fatal(err)
 			}
 		}
@@ -216,16 +231,22 @@ func getRoundTripAndServiceTime(nRequests int64, functionURL string, serverStdou
 	return roundTripTime, serviceTime
 }
 
-func getHTTPServerReadyAndServiceTS(functionURL string, serverStdout io.ReadCloser, clStats bool) ([]int64, error) {
+func getHTTPServerReadyAndServiceTS(cli *http.Client, req *http.Request, serverStdout io.ReadCloser, clStats bool) ([]int64, error) {
 	maxFailsToStart := int64(2000)
 	var failCount int64
 	reqStatsNS := make([]int64, 8)
 	for {
-		resp, err := http.Get(functionURL)
-		if err == nil  {
-			defer resp.Body.Close()
+		resp, err := cli.Do(req)
+		if err != nil {
+			time.Sleep(5 * time.Millisecond)
+			failCount += 1
+			if failCount == maxFailsToStart {
+				return reqStatsNS, err
+			}
+		} else {
 			if resp.StatusCode == http.StatusOK {
 				io.Copy(ioutil.Discard, resp.Body)
+				resp.Body.Close()
 				fmt.Fscanf(serverStdout, "EIM: %d", &reqStatsNS[0])
 				fmt.Fscanf(serverStdout, "EFM: %d", &reqStatsNS[1])
 				fmt.Fscanf(serverStdout, "T4: %d", &reqStatsNS[2])
@@ -239,24 +260,12 @@ func getHTTPServerReadyAndServiceTS(functionURL string, serverStdout io.ReadClos
 				return reqStatsNS, nil
 			} else {
 				respBody, err := ioutil.ReadAll(resp.Body)
+				resp.Body.Close()
 				if err != nil {
 					return reqStatsNS, err
 				}
 				return reqStatsNS, fmt.Errorf("Server is up, but HTTP response is not OK! StatusCode: %d, Request Response: %s\n", resp.StatusCode, respBody)
 			}
-		} else {
-			time.Sleep(5 * time.Millisecond)
-			failCount += 1
-			if failCount == maxFailsToStart {
-				return reqStatsNS, err
-			}
 		}
 	}
-}
-
-func sendRequest2(URL string) (*http.Response, error, int64, int64) {
-	sendRequestNanoTS := Now()
-	response, err := http.Get(URL)
-	receiveResponseNanoTS := Now()
-	return response, err, sendRequestNanoTS, receiveResponseNanoTS
 }
