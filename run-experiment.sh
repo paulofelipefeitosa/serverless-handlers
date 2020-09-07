@@ -1,12 +1,11 @@
 #!/bin/bash
 set -e
-TYPE_DIR=$1 # server-http-handler or std-server-handler
-RUNTIME=$2 # java, nodejs, python
-APP_NAME=$3 # APP DIR NAME
-IMAGE_URL=$4 # URL to download image
-REP_EXEC=$5 # integer value
-REP_REQ=$6 # integer value
-HANDLER_TYPE=$7 # criu or no-criu
+TYPE_DIR="functions"
+RUNTIME=$1      # java, nodejs, python
+APP_NAME=$2     # APP DIR NAME
+REP_EXEC=$3     # Number of executions
+HANDLER_TYPE=$4 # criu or no-criu
+EXEC_CONFIG=$5  # Filepath to the execution config.
 
 for i in "$@"
 do
@@ -15,7 +14,7 @@ do
 		TRACER_EB="${i#*=}"
 		shift # past argument=value
 		;;
-		-sfjar=*|--sf_jar_name=*) # Synthetic Function Jar Path
+		-sfjar=*|--sf_jar_path=*) # Synthetic Function Jar Path
 		SF_JAR_PATH="${i#*=}"
 		shift # past argument=value
 		;;
@@ -72,7 +71,7 @@ build_criu_app() {
 	bash $criu_builder "build" $APP_DIR $SF_JAR_PATH
 
 	echo "Running $APP_DIR App"
-	bash $criu_builder "dump" $APP_DIR $HTTP_SERVER_ADDRESS $CRIU_APP_OUTPUT -scale=0.1 -image_path=$IMAGE_PATH -sfjar=$SF_JAR_PATH -warm=$WARM_REQ
+	bash $criu_builder "dump" $APP_DIR $HTTP_SERVER_ADDRESS $CRIU_APP_OUTPUT -sfjar=$SF_JAR_PATH -warm=$WARM_REQ
 }
 
 build_default_app() {
@@ -91,79 +90,67 @@ build_default_app() {
 }
 
 echo "Building experiment"
-EXP_APP_NAME="execute-requests"
+EXP_APP_NAME="$TYPE_DIR"
 source /etc/profile
-go build $TYPE_DIR/"$EXP_APP_NAME".go
-
-echo "Downloading image from [$IMAGE_URL]"
-cd $APP_DIR
-IMAGE_NAME=$(basename $IMAGE_URL)
-wget -O $IMAGE_NAME $IMAGE_URL
-IMAGE_PATH=$(pwd)/$IMAGE_NAME
+cd $TYPE_DIR
+go build
 cd -
 
 echo "Starting experiment"
 
 CURRENT_TS=$(date +%s)
-RESULTS_FILENAME=$TYPE_DIR-$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$WARM_REQ-$SF_JAR_NAME-$BPFTRACE_EXEC.csv
+RESULTS_FILENAME=$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_EXEC-$WARM_REQ-$SF_JAR_NAME-$BPFTRACE_EXEC.csv
 
 echo "Number of executions [$REP_EXEC]"
-echo "Number of requests [$REP_REQ]"
 echo "Results filename [$RESULTS_FILENAME]"
 
 echo "Metric,ExecID,ReqID,KernelTime_NS" > $RESULTS_FILENAME
 
-BPFTRACE_OUT=$(pwd)/$TYPE_DIR-$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$WARM_REQ-$SF_JAR_NAME-BPFTRACE.out
-BCCTRACE_OUT=$(pwd)/$TYPE_DIR-$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_EXEC-$REP_REQ-$WARM_REQ-$SF_JAR_NAME-BCC.out
+BPFTRACE_OUT=$(pwd)/$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_EXEC-$WARM_REQ-$SF_JAR_NAME-BPFTRACE.out
+BCCTRACE_OUT=$(pwd)/$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_EXEC-$WARM_REQ-$SF_JAR_NAME-BCC.out
 for i in $(seq "$REP_EXEC")
 do
 	echo "REP_EXEC $i..."
 	EXECUTION_SUCCESS=-1
 	while [ $EXECUTION_SUCCESS -ne 0 ];
 	do
-		if [ $TYPE_DIR == "server-http-handler" ];
-		then
-			if [ $HANDLER_TYPE == "criu" ];
-			then
-				echo "HTTP Server CRIU Handler"
-				set +e
-				build_criu_app
-				set -e
+    if [ $HANDLER_TYPE == "criu" ];
+    then
+      echo "HTTP Server CRIU Handler"
+      set +e
+      build_criu_app
+      set -e
 
-				BPFTRACER_PID=$(EXEC=$BPFTRACE_EXEC bash clone-exec-bpftrace.sh run $BPFTRACE_OUT $EXP_APP_NAME $TRACER_EB)
-				BCCTRACER_PID=$(EXEC=$IO_STATS bash iostats-tracer.sh run $BCCTRACE_OUT)
+      BPFTRACER_PID=$(EXEC=$BPFTRACE_EXEC bash clone-exec-bpftrace.sh run $BPFTRACE_OUT $EXP_APP_NAME $TRACER_EB)
+      BCCTRACER_PID=$(EXEC=$IO_STATS bash iostats-tracer.sh run $BCCTRACE_OUT)
 
-				echo "Running execute requests script"
-				set +e
-				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $RUNTIME $APP_DIR $HANDLER_TYPE $APP_DIR/$CRIU_APP_OUTPUT >> $RESULTS_FILENAME
-				EXECUTION_SUCCESS=$?
-				EXECUTOR_PID=$!
+      echo "Running execute requests script"
+      set +e
+      ./$TYPE_DIR/$EXP_APP_NAME $HTTP_SERVER_ADDRESS $i $RUNTIME $APP_DIR $HANDLER_TYPE $EXEC_CONFIG $APP_DIR/$CRIU_APP_OUTPUT >> $RESULTS_FILENAME
+      EXECUTION_SUCCESS=$?
+      EXECUTOR_PID=$!
 
-				echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
-				set -e
+      echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
+      set -e
 
-				EXEC=$BPFTRACE_EXEC bash clone-exec-bpftrace.sh parse $BPFTRACE_OUT $i $EXECUTION_SUCCESS $BPFTRACER_PID $RESULTS_FILENAME
-				EXEC=$IO_STATS bash iostats-tracer.sh parse $BCCTRACE_OUT $EXECUTION_SUCCESS $BCCTRACER_PID
-				bash criu-logs-tracer.sh parse $i $EXECUTION_SUCCESS $APP_DIR $RESULTS_FILENAME
-			else
-				echo "HTTP Server Handler"
-				build_default_app
+      EXEC=$BPFTRACE_EXEC bash clone-exec-bpftrace.sh parse $BPFTRACE_OUT $i $EXECUTION_SUCCESS $BPFTRACER_PID $RESULTS_FILENAME
+      EXEC=$IO_STATS bash iostats-tracer.sh parse $BCCTRACE_OUT $EXECUTION_SUCCESS $BCCTRACER_PID
+      bash criu-logs-tracer.sh parse $i $EXECUTION_SUCCESS $APP_DIR $RESULTS_FILENAME
+    else
+      echo "HTTP Server Handler"
+      build_default_app
 
-				BPFTRACER_PID=$(EXEC=$BPFTRACE_EXEC bash clone-exec-bpftrace.sh run $BPFTRACE_OUT $EXP_APP_NAME $TRACER_EB)
-				BCCTRACER_PID=$(EXEC=$IO_STATS bash iostats-tracer.sh run $BCCTRACE_OUT)
+      BPFTRACER_PID=$(EXEC=$BPFTRACE_EXEC bash clone-exec-bpftrace.sh run $BPFTRACE_OUT $EXP_APP_NAME $TRACER_EB)
+      BCCTRACER_PID=$(EXEC=$IO_STATS bash iostats-tracer.sh run $BCCTRACE_OUT)
 
-				echo "Running execute requests script"
-				scale=0.1 image_path=$IMAGE_PATH ./$EXP_APP_NAME $HTTP_SERVER_ADDRESS / $REP_REQ $i $RUNTIME $APP_DIR $HANDLER_TYPE $SF_JAR_PATH >> $RESULTS_FILENAME
-				EXECUTION_SUCCESS=$?
+      echo "Running execute requests script"
+      ./$TYPE_DIR/$EXP_APP_NAME $HTTP_SERVER_ADDRESS $i $RUNTIME $APP_DIR $HANDLER_TYPE $EXEC_CONFIG $SF_JAR_PATH >> $RESULTS_FILENAME
+      EXECUTION_SUCCESS=$?
 
-				echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
+      echo "$EXP_APP_NAME exit code [$EXECUTION_SUCCESS]"
 
-				EXEC=$BPFTRACE_EXEC bash clone-exec-bpftrace.sh parse $BPFTRACE_OUT $i $EXECUTION_SUCCESS $BPFTRACER_PID $RESULTS_FILENAME
-				EXEC=$IO_STATS bash iostats-tracer.sh parse $BCCTRACE_OUT $EXECUTION_SUCCESS $BCCTRACER_PID
-			fi
-		else
-			echo "Could not identify the experiment type [$TYPE_DIR]"
-			exit -1
-		fi
+      EXEC=$BPFTRACE_EXEC bash clone-exec-bpftrace.sh parse $BPFTRACE_OUT $i $EXECUTION_SUCCESS $BPFTRACER_PID $RESULTS_FILENAME
+      EXEC=$IO_STATS bash iostats-tracer.sh parse $BCCTRACE_OUT $EXECUTION_SUCCESS $BCCTRACER_PID
+    fi
 	done
 done
