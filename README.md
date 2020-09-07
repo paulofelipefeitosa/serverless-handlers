@@ -1,4 +1,32 @@
-# Java functions for OpenFaaS experiments
+# Prebaking Technique Experiments
+
+## Execution Config
+``` json
+{
+    "EnvVars": ["scale=0.1", "image_path=/home/user/image.jpg"],
+    "RequestAmount": 200,
+    "Request": {
+        "Method": "GET",
+        "Path": "/",
+        "Headers": {},
+        "Bodyfilepath": "/home/user/body.json",
+    },
+}
+```
+
+## Execution Script
+
+``` bash
+bash run-experiment.sh <runtime> <app-name> <executions> <startup-type> <execution-config>
+```
+
+### Optional parameters
+1. `--tracer_executor_binary=`: tracer executor binary path.
+2. `--sf_jar_path=`: synthetic function jar path.
+3. `--warm_req`: send warm up request before process checkpoint.
+4. `--iostats`: enable I/O stats tracing.
+
+# Prebaking Technique Integration
 
 ## Deploying OpenFaaS
 
