@@ -111,7 +111,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("cannot deserialize the content of config file (%s), due to (%v)", configPath, err)
 	}
-	req, err := cfg.Request.HTTPRequest(serverAddr)
+	req, err := cfg.RequestSpec.HTTPRequest(serverAddr)
 	if err != nil {
 		log.Fatalf("cannot create request to sent to functions due to (%v)", err)
 	}

@@ -4,8 +4,8 @@
 ``` json
 {
     "EnvVars": ["scale=0.1", "image_path=/home/user/image.jpg"],
-    "RequestAmount": 200,
-    "Request": {
+    "Requests": 200,
+    "RequestSpec": {
         "Method": "GET",
         "Path": "/",
         "Headers": {},
