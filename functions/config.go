@@ -9,9 +9,9 @@ import (
 )
 
 type ExecutionConfig struct {
-	EnvVars  []string // Additional environment variables in format "key=value".
-	Requests int      // Number of the request that should be applied.
-	Request  *Request // The specification of the request that will be sent to the function.
+	EnvVars     []string // Additional environment variables in format "key=value".
+	Requests    int      // Number of the request that should be applied.
+	RequestSpec *Request // The specification of the request that will be sent to the function.
 }
 
 type RequestMethod string
