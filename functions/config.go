@@ -25,7 +25,6 @@ const (
 type Request struct {
 	Method       string
 	Path         string
-	Headers      map[string]string
 	BodyFilepath string
 }
 
@@ -54,10 +53,6 @@ func (r *Request) GetBody() (string, error) {
 		return "", fmt.Errorf("unable to read file (%s) which contains the request body content due to (%v)", r.BodyFilepath, err)
 	}
 	return string(c), nil
-}
-
-func (r *Request) GetHeaders() map[string]string {
-	return r.Headers
 }
 
 func (r *Request) HTTPRequest(hostAddr string) (*http.Request, error) {

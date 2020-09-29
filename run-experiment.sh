@@ -2,7 +2,7 @@
 set -e
 TYPE_DIR="functions"
 RUNTIME=$1      # java, nodejs, python
-APP_NAME=$2     # APP DIR NAME
+APP_NAME=$2     # The name of the APP
 REP_EXEC=$3     # Number of executions
 HANDLER_TYPE=$4 # criu or no-criu
 EXEC_CONFIG=$5  # Filepath to the execution config.
@@ -10,7 +10,7 @@ EXEC_CONFIG=$5  # Filepath to the execution config.
 for i in "$@"
 do
 	case $i in
-		-t_eb=*|--tracer_executor_binary=*) # Tracer executor binary path
+		-t_eb=*|--executor_process_name=*) # Tracer executor binary path
 		TRACER_EB="${i#*=}"
 		shift # past argument=value
 		;;
@@ -104,7 +104,7 @@ RESULTS_FILENAME=$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_EXEC-$WARM_RE
 echo "Number of executions [$REP_EXEC]"
 echo "Results filename [$RESULTS_FILENAME]"
 
-echo "Metric,ExecID,ReqID,KernelTime_NS" > $RESULTS_FILENAME
+echo "Metric,ExecID,ReqID,Value" > $RESULTS_FILENAME
 
 BPFTRACE_OUT=$(pwd)/$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_EXEC-$WARM_REQ-$SF_JAR_NAME-BPFTRACE.out
 BCCTRACE_OUT=$(pwd)/$RUNTIME-$HANDLER_TYPE-$APP_NAME-$CURRENT_TS-$REP_EXEC-$WARM_REQ-$SF_JAR_NAME-BCC.out
