@@ -8,6 +8,10 @@ TODO(paulofelipefeitosa): describe this section.
 
 [How]
 
+## Dependencies
+
+TODO(paulofelipefeitosa): describe all dependencies.
+
 ## Load Generator Config
 
 The [Load Generator](functions/README.md) is the software component responsible
