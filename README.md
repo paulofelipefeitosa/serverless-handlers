@@ -149,6 +149,8 @@ the synthetic function classes.
 5. **LoadingClassesOverheadTime** - the introduced overhead to request the load
 of all synthetic function classes. This overhead time unit is nanoseconds.
 
+Please also note that these metrics only are collected for the very first request
+ with `ReqID == 0`.
 
 ## Use cases
 
