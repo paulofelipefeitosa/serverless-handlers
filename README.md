@@ -10,7 +10,15 @@ TODO(paulofelipefeitosa): describe this section.
 
 ## Dependencies
 
-TODO(paulofelipefeitosa): describe all dependencies.
+This project requires the installation of the following dependencies:
+* [**Golang**](https://golang.org/doc/install);
+* [**Python 3**](https://docs.python.org/3/using/unix.html#on-linux);
+* [**Python 2**](https://docs.python.org/2/using/unix.html#on-linux);
+* [**Java 8**](https://docs.datastax.com/en/jdk-install/doc/jdk-install/installOpenJdkDeb.html);
+* [**Rlang**](https://docs.rstudio.com/resources/install-r/);
+* [**CRIU**](https://criu.org/Installation);
+* [**Bpftrace**](https://github.com/iovisor/bpftrace/blob/master/INSTALL.md).
+
 
 ## Load Generator Config
 
@@ -155,7 +163,3 @@ of all synthetic function classes. This overhead time unit is nanoseconds.
 
 Please also note that these metrics only are collected for the very first request
  with `ReqID == 0`.
-
-## Use cases
-
-TODO(paulofelipefeitosa): describe the paper use cases and how to execute each of them.
