@@ -77,10 +77,13 @@ build_criu_app() {
 build_default_app() {
 	if [ $RUNTIME == "java" ];
 	then
-        cd $APP_DIR
-        echo "Building $APP_DIR App to Jar"
-        mvn install
-        cd -
+        if [ -z "$SF_JAR_PATH" ];
+		then
+			cd $APP_DIR
+			echo "Building $APP_DIR App to Jar"
+			mvn install
+			cd -
+		fi
 	fi
 	
 	clean_env
