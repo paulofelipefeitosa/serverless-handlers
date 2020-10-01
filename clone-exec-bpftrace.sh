@@ -33,6 +33,7 @@ then
 
 		if [ $EXEC_SUCCESS -eq 0 ];
 		then
+			sleep 1
 			sync
 			set +e
 			python -u probes-specs/execve-clone-parser-bpftrace.py $EXECID < $BPFTRACE_OUT >> $RESULTS_FILENAME
