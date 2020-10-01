@@ -1,12 +1,7 @@
 # Prebaking Technique Experiments
 
-TODO(paulofelipefeitosa): describe this section.
-
-[What]
-
-[Why]
-
-[How]
+This project contains the scripts and software used to perform and evaluate
+experiments using the Prebaking Technique for Serverless Functions.
 
 ## Dependencies
 
