@@ -44,6 +44,9 @@ func (r *Request) GetMethod() (RequestMethod, error) {
 }
 
 func (r *Request) GetBody() (string, error) {
+	if r.BodyFilepath == "" {
+		return "", nil
+	}
 	f, err := os.Open(r.BodyFilepath)
 	if err != nil {
 		return "", fmt.Errorf("unable to open file (%s) which contains the request body content due to (%v)", r.BodyFilepath, err)
