@@ -33,7 +33,7 @@
 		              <archive>
 		                <manifest>
 		                  <mainClass>
-		                    com.markdown.server.App
+		                    com.noopclassloader.server.App
 		                  </mainClass>
 		                </manifest>
 		              </archive>
