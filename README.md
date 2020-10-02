@@ -5,19 +5,23 @@ experiments using the Prebaking Technique for Serverless Functions.
 
 ## Dependencies
 
-This project requires the installation of the following dependencies:
+This project requires the installation of the following dependencies, clicking on
+them will redirect you to a resource explaining how to install each one:
 * [**Golang**](https://golang.org/doc/install);
 * [**Python 3**](https://docs.python.org/3/using/unix.html#on-linux);
 * [**Python 2**](https://docs.python.org/2/using/unix.html#on-linux);
 * [**Java 8**](https://docs.datastax.com/en/jdk-install/doc/jdk-install/installOpenJdkDeb.html);
 * [**Rlang**](https://docs.rstudio.com/resources/install-r/);
-* [**CRIU**](https://criu.org/Installation);
-* [**Bpftrace**](https://github.com/iovisor/bpftrace/blob/master/INSTALL.md).
+* [**CRIU v2.6**](https://criu.org/Installation);
+* [**Bpftrace**](https://github.com/iovisor/bpftrace/blob/master/INSTALL.md);
+* [**Maven**](https://maven.apache.org/install.html).
 
+Note that you might want to install these tools using easier approaches than 
+those made available here.
 
 ## Load Generator Config
 
-The [Load Generator](functions/README.md) is the software component responsible
+The Load Generator is the software component responsible
 for the function process launch and workload injection in order to measure the 
 start-up metrics.
 
