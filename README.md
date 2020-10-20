@@ -11,9 +11,9 @@ them will redirect you to a resource explaining how to install each one:
 * [**Python 3**](https://docs.python.org/3/using/unix.html#on-linux);
 * [**Python 2**](https://docs.python.org/2/using/unix.html#on-linux);
 * [**Java 8**](https://docs.datastax.com/en/jdk-install/doc/jdk-install/installOpenJdkDeb.html);
-* [**Rlang**](https://docs.rstudio.com/resources/install-r/);
+* [**Rlang >= v4.0.0**](https://docs.rstudio.com/resources/install-r/);
 * [**CRIU v2.6**](https://criu.org/Installation);
-* [**Bpftrace**](https://github.com/iovisor/bpftrace/blob/master/INSTALL.md);
+* [**Bpftrace v0.9**](https://github.com/iovisor/bpftrace/blob/master/INSTALL.md);
 * [**Maven**](https://maven.apache.org/install.html).
 
 Note that you might want to install these tools using easier approaches than 
