@@ -46,8 +46,10 @@ then
 		esac
 	done
 	truncate --size=0 $CRIU_APP_OUTPUT
-    ENV_VARS=$(python3 env-vars < $EXEC_CONFIG)
-	setsid "${ENV_VARS}" java -jar target/app-0.0.1-SNAPSHOT-jar-with-dependencies.jar $SF_JAR_PATH < /dev/null &> $CRIU_APP_OUTPUT &
+    ENV_VARS=$(python3 ../env-vars.py < $EXEC_CONFIG)
+    echo "EnvVars: $ENV_VARS"
+    export $ENV_VARS
+	setsid java -jar target/app-0.0.1-SNAPSHOT-jar-with-dependencies.jar $SF_JAR_PATH < /dev/null &> $CRIU_APP_OUTPUT &
 
 	APP_PID=$(pgrep java)
 	echo "Java App PID [$APP_PID]"

@@ -71,7 +71,7 @@ build_criu_app() {
 	bash $criu_builder "build" $APP_DIR $SF_JAR_PATH
 
 	echo "Running $APP_DIR App"
-	bash $criu_builder "dump" $APP_DIR $HTTP_SERVER_ADDRESS $CRIU_APP_OUTPUT -sfjar=$SF_JAR_PATH -warm=$WARM_REQ
+	bash $criu_builder "dump" $APP_DIR $HTTP_SERVER_ADDRESS $CRIU_APP_OUTPUT ${PWD}/$EXEC_CONFIG -sfjar=$SF_JAR_PATH -warm=$WARM_REQ
 }
 
 build_default_app() {

@@ -1,4 +1,4 @@
-import json
+import json, sys
 
 config = sys.stdin.read()
 j = json.loads(config)
