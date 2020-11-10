@@ -12,7 +12,7 @@ them will redirect you to a resource explaining how to install each one:
 * [**Python 2 >= v2.7.12**](https://docs.python.org/2/using/unix.html#on-linux);
 * [**Java 8**](https://docs.datastax.com/en/jdk-install/doc/jdk-install/installOpenJdkDeb.html);
 * [**Rlang >= v4.0.0**](https://docs.rstudio.com/resources/install-r/);
-* [**CRIU v2.6**](https://criu.org/Installation);
+* [**CRIU >= v2.6**](https://criu.org/Installation);
 * [**Bpftrace v0.9**](https://github.com/iovisor/bpftrace/blob/master/INSTALL.md);
 * [**Maven >= v3.3.9**](https://maven.apache.org/install.html).
 
