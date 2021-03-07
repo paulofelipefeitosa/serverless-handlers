@@ -1,0 +1,66 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more contributor
+# license agreements; and to You under the Apache License, Version 2.0.
+---
+# This role installs seuss_invokers.
+#
+
+- name: deploy seuss
+  hosts: all
+  tasks:
+  - name: prepare seuss_invoker env
+    set_fact:
+      env:
+        "SEUSS_NATIVE_CORES": '2'
+        "SEUSS_NATIVE_MEMORY": '4'
+        "SEUSS_NATIVE_NUMA": '1'
+        "SEUSS_INVOKER_MODE": "benchmark"
+        "SEUSS_INVOKER_FILE": "{{ main_file }}"
+        "SEUSS_INVOKER_DELAY": '0'
+        "SEUSS_INVOKER_KEEP_IDLE": '0'
+        "SEUSS_INVOKER_REUSE_LIMIT": '0'
+        "SEUSS_INVOKER_CONCURRENCY_LIMIT": '1'
+        "INVOKER_NAME": "123456"
+        "PORT": '8080'
+        "EBBRT_NODE_ALLOCATOR_CUSTOM_NETWORK_IP_CMD" : "ip addr show eth0 | grep 'inet ' | cut -d ' ' -f 6 #"
+        "EBBRT_NODE_ALLOCATOR_CUSTOM_NETWORK_CREATE_CMD" : "echo bridge"
+        "EBBRT_NODE_ALLOCATOR_CUSTOM_NETWORK_REMOVE_CMD" : "true"
+        "ZOOKEEPER_HOSTS": "127.0.0.1"
+        "KAFKA_HOSTS": "127.0.0.1"
+        "CONFIG_whisk_couchdb_host": "127.0.0.1"
+        "CONFIG_whisk_couchdb_password": "password"
+        "CONFIG_whisk_couchdb_port": "5000"
+        "CONFIG_whisk_couchdb_protocol": "http"
+        "CONFIG_whisk_couchdb_provider": "provider"
+        "CONFIG_whisk_couchdb_username": "username"
+        "CONFIG_whisk_couchdb_databases_WhiskAuth": "auth"
+        "CONFIG_whisk_couchdb_databases_WhiskEntity": "actions"
+        "CONFIG_whisk_couchdb_databases_WhiskActivation": "active"
+
+  - name: prepare seuss_invoker ports
+    set_fact:
+      ports_to_expose: ["8080"]
+
+  - name: set invoker volumes
+    set_fact:
+      volumes: "/sys/fs/cgroup:/sys/fs/cgroup,/run/runc:/run/runc,\
+        {{ logs_path }}:/logs,\
+        {{ conf_path }}:/conf,\
+        {{ function_project }}:/function,\
+        {{ docker_sock | default('/var/run/docker.sock') }}:/var/run/docker.sock"
+
+  - name: start seuss_invoker using docker cli
+    docker_container:
+      userns_mode: "host"
+      pid_mode: "host"
+      privileged: "yes"
+      interactive: "yes"
+      tty: "yes"
+      name: mycontainer
+      hostname: "seuss"
+      image: "pfelipefeitosa/seuss"
+      state: started
+      recreate: false
+      env: "{{ env }}"
+      volumes: "{{ volumes }}"
+      ports: "{{ ports_to_expose }}"
+      command: /bin/sh -c "exec /root/seuss/seuss -C $SEUSS_INVOKER_CONCURRENCY_LIMIT -S $SEUSS_INVOKER_KEEP_IDLE -R $SEUSS_INVOKER_REUSE_LIMIT -b seuss.elf32 -m $SEUSS_NATIVE_MEMORY --mode $SEUSS_INVOKER_MODE --file $SEUSS_INVOKER_FILE --invoker-delay $SEUSS_INVOKER_DELAY -n 1 -c $SEUSS_NATIVE_CORES --numa $SEUSS_NATIVE_NUMA -z $ZOOKEEPER_HOSTS -k $KAFKA_HOSTS -t $INVOKER_NAME --couchdb_host $CONFIG_whisk_couchdb_host --couchdb_password $CONFIG_whisk_couchdb_password --couchdb_port $CONFIG_whisk_couchdb_port --couchdb_protocol $CONFIG_whisk_couchdb_protocol --couchdb_provider $CONFIG_whisk_couchdb_provider --couchdb_username $CONFIG_whisk_couchdb_username --couchdb_db_entity $CONFIG_whisk_couchdb_databases_WhiskEntity --couchdb_db_auth $CONFIG_whisk_couchdb_databases_WhiskAuth --couchdb_db_activation $CONFIG_whisk_couchdb_databases_WhiskActivation"
