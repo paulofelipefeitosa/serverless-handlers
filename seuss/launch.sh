@@ -12,16 +12,25 @@ then
   exit 1
 fi
 
-if [[ ! -f "$MAIN_FILE" ]]
-then
-  echo "$MAIN_FILE is not a file, please set the correct executable function filepath"
-fi
+echo "Launching SEUSS"
 
 cd tasks/
 ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 deploy.yml -i ansible_hosts \
   --extra-vars "logs_path=$LOGS_PATH conf_path=$CONF_PATH function_project=$FUNC_PROJ_PATH main_file=$MAIN_FILE"
 cd ..
 
-sleep 10
+echo "Waiting until SEUSS native container be up and running"
 
-docker logs mycontainer
+while
+  docker logs mycontainer &> mycontainer.log
+  if grep -q "ALLOCATION TIME: " mycontainer.log;
+  then
+    break
+  else
+    sleep 1
+  fi
+do
+  :
+done
+
+echo "Done"
