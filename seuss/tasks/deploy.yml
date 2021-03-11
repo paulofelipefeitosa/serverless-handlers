@@ -45,7 +45,7 @@
       volumes: "/sys/fs/cgroup:/sys/fs/cgroup,/run/runc:/run/runc,\
         {{ logs_path }}:/logs,\
         {{ conf_path }}:/conf,\
-        {{ function_project }}:/function,\
+        {{ function_project }}:/root/seuss/function,\
         {{ docker_sock | default('/var/run/docker.sock') }}:/var/run/docker.sock"
 
   - name: start seuss_invoker using docker cli
@@ -54,7 +54,6 @@
       pid_mode: "host"
       privileged: "yes"
       interactive: "yes"
-      tty: "yes"
       name: mycontainer
       hostname: "seuss"
       image: "pfelipefeitosa/seuss"
