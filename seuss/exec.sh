@@ -2,18 +2,20 @@
 set -e
 
 ROUNDS=$1
+LOG_FILEPATH=$2
 
 echo "Executing experiment with the following parameters: ($ROUNDS, 1, 1, 1)"
 
 echo "$ROUNDS, 1, 1, 1" | docker attach mycontainer &
 
-ATTACH_PID=$!
+sleep 1
+
 lines=$((2 * "$ROUNDS"))
 
 while
-  docker logs mycontainer &> mycontainer.log
+  docker logs mycontainer &> "$LOG_FILEPATH"
   # shellcheck disable=SC2126
-  len=$(grep -A1 "Scheduling activation" < mycontainer.log | wc -l)
+  len=$(grep -A1 "Scheduling activation" < "$LOG_FILEPATH" | wc -l)
   if [ "$len" == "$lines" ];
   then
     break
