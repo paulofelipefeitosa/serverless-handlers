@@ -21,13 +21,20 @@ ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 dep
 cd ..
 
 echo "Waiting until SEUSS native container be up and running"
+max_retries=300
+count=0
 
 while
   docker logs mycontainer &> "$LOG_FILEPATH"
   if grep -q "ALLOCATION TIME: " "$LOG_FILEPATH";
   then
     break
+  elif [ "$count" -ge "$max_retries" ];
+  then
+    echo "Max retries reached, exiting with status 10"
+    exit 10
   else
+    count=$((count + 1))
     sleep 1
   fi
 do

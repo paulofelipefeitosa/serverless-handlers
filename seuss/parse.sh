@@ -1,13 +1,12 @@
 #!/bin/bash
 
-LOG_FILEPATH=$1
-RESULTS_FILEPATH=$2
+EXP_ID=$1
+LOG_FILEPATH=$2
+RESULTS_FILEPATH=$3
 
 echo "Parsing SEUSS log to generate results csv"
 
 records=$(awk '/Scheduling activation/{getline; print}' "$LOG_FILEPATH")
-
-echo "req_id, duration, start_ts, end_ts, status, wait_time, init_time, run_time, resp" > "$RESULTS_FILEPATH"
 
 first_part=$(echo "$records" | awk '{split($0,l,",\""); print l[1]}')
 sec_part=$(echo "$records" | awk '{split($0,l,",\""); print l[2]}')
@@ -28,7 +27,7 @@ AR_FIRST=($first_part)
 
 for index in "${!AR_WAIT[@]}";
 do
-  echo "${AR_FIRST[index]}, ${AR_WAIT[index]}, ${AR_INIT[index]}, ${AR_RUN[index]}, \"{${AR_RESP[index]}" >> "$RESULTS_FILEPATH"
+  echo "$EXP_ID, ${AR_FIRST[index]}, ${AR_WAIT[index]}, ${AR_INIT[index]}, ${AR_RUN[index]}, \"{${AR_RESP[index]}" >> "$RESULTS_FILEPATH"
 done
 
 echo "End of parsing procedure"
