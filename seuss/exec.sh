@@ -6,9 +6,11 @@ LOG_FILEPATH=$2
 
 echo "Executing experiment with the following parameters: ($ROUNDS, 1, 1, 1)"
 
-echo "$ROUNDS, 1, 1, 1" | docker attach mycontainer &
+PID=$(docker inspect -f '{{.State.Pid}}' mycontainer)
+echo "Writing on PID: $PID"
+docker exec -it mycontainer sh -c "echo $ROUNDS, 1, 1, 1 > /proc/$PID/fd/0"
 
-sleep 3
+sleep 1
 
 lines=$((2 * "$ROUNDS"))
 max_retries=100
